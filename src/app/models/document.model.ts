@@ -39,3 +39,15 @@ export interface AnalysisResult {
   errorMessage?: string;
   processedAt?: string;
 }
+
+export interface BackendAnalysisResponse {
+  document_id: string;
+  extracted_data: ExtractedHealthData[];
+  ai_insights: string;
+  raw_text: string;
+  status: string;
+  filename: string;
+  uploaded_at: string;
+  error_message?: string;
+  processed_at?: string;
+}

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError, timer, of } from 'rxjs';
 import { catchError, switchMap, takeWhile, tap } from 'rxjs/operators';
-import { HealthDocument, DocumentStatus, UploadResponse, AnalysisResult } from '../models/document.model';
+import { HealthDocument, DocumentStatus, UploadResponse, AnalysisResult, BackendAnalysisResponse } from '../models/document.model';
 
 @Injectable({
   providedIn: 'root'
@@ -112,7 +112,7 @@ export class DocumentAnalysisService {
     const pollInterval = timer(0, 2000); // Poll every 2 seconds
     
     pollInterval.pipe(
-      switchMap(() => this.http.get<any>(`${this.API_BASE_URL}/document/${documentId}`)),
+      switchMap(() => this.http.get<BackendAnalysisResponse>(`${this.API_BASE_URL}/document/${documentId}`)),
       takeWhile(result => result.status === 'processing', true)
     ).subscribe({
       next: (result) => {
@@ -125,7 +125,7 @@ export class DocumentAnalysisService {
     });
   }
 
-  private updateDocumentFromBackend(documentId: string, result: any): void {
+  private updateDocumentFromBackend(documentId: string, result: BackendAnalysisResponse): void {
     const documents = this.documentsSubject.value;
     const documentIndex = documents.findIndex(doc => doc.id === documentId);
     
@@ -162,19 +162,19 @@ export class DocumentAnalysisService {
 
   getDocument(id: string): Observable<HealthDocument | undefined> {
     // Try backend first, fallback to local storage
-    return this.http.get<any>(`${this.API_BASE_URL}/document/${id}`)
+    return this.http.get<BackendAnalysisResponse>(`${this.API_BASE_URL}/document/${id}`)
       .pipe(
         switchMap(result => {
           const document: HealthDocument = {
-            id: result.document_id || result.documentId,
+            id: result.document_id,
             title: this.generateTitle(result.filename),
             filename: result.filename,
-            uploadedAt: new Date(result.uploaded_at || result.uploadedAt),
+            uploadedAt: new Date(result.uploaded_at),
             status: result.status as DocumentStatus,
-            extractedData: result.extracted_data || result.extractedData || [],
-            aiInsights: result.ai_insights || result.aiInsights || '',
-            rawText: result.raw_text || result.rawText || '',
-            errorMessage: result.error_message || result.errorMessage
+            extractedData: result.extracted_data || [],
+            aiInsights: result.ai_insights || '',
+            rawText: result.raw_text || '',
+            errorMessage: result.error_message
           };
           return of(document);
         }),
