@@ -1,14 +1,27 @@
+# Ultra-Simple MVP Requirements
+
+# Core Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-Pillow==10.1.0
-pytesseract==0.3.10
-PyPDF2==3.0.1
-pydantic-ai==0.2.19
-python-dotenv==1.0.0
+
+# Data Validation
 pydantic==2.5.0
-httpx==0.25.2
+pydantic-settings==2.1.0
+
+# HTTP & Async
+aiohttp==3.9.1
 aiofiles==23.2.0
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-logfire==0.51.0
+
+# Environment
+python-dotenv==1.0.0
+
+# Image Processing
+Pillow==10.1.0
+
+# Cloud Services
+mistralai==1.0.0
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
