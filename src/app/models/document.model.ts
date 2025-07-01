@@ -33,4 +33,9 @@ export interface AnalysisResult {
   extractedData: ExtractedHealthData[];
   aiInsights: string;
   rawText: string;
+  status: string;
+  filename: string;
+  uploadedAt: string;
+  errorMessage?: string;
+  processedAt?: string;
 }
