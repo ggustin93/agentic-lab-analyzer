@@ -94,6 +94,40 @@
   .data-table tbody tr:nth-child(even) {
     @apply bg-gray-50;
   }
+  
+  /* Enhanced highlighting for out-of-range values */
+  .data-table tbody tr.highlight-low {
+    @apply bg-amber-50 border-l-4 border-amber-400;
+  }
+  
+  .data-table tbody tr.highlight-high {
+    @apply bg-red-50 border-l-4 border-red-400;
+  }
+  
+  .data-table tbody tr.highlight-low td {
+    @apply border-amber-100;
+  }
+  
+  .data-table tbody tr.highlight-high td {
+    @apply border-red-100;
+  }
+  
+  /* Status badges for values */
+  .status-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+  
+  .status-badge.low {
+    @apply bg-amber-100 text-amber-800 border border-amber-200;
+  }
+  
+  .status-badge.high {
+    @apply bg-red-100 text-red-800 border border-red-200;
+  }
+  
+  .status-badge.standard {
+    @apply bg-blue-100 text-blue-800 border border-blue-200;
+  }
 }
 
 /* Markdown content styling */

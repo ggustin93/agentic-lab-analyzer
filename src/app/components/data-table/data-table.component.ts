@@ -27,6 +27,8 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
           </thead>
           <tbody>
             <tr *ngFor="let item of data" 
+                [class.highlight-low]="getValueStatus(item) === 'watch'"
+                [class.highlight-high]="getValueStatus(item) === 'high'"
                 [style.background-color]="getRowBackgroundColor(item)">
               <td class="relative">
                 <div class="flex items-center space-x-2">
@@ -50,11 +52,11 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
                 <div class="flex items-center space-x-2">
                   <span>{{ item.value }}</span>
                   <span *ngIf="getValueStatus(item) === 'watch'" 
-                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                    WATCH
+                        class="status-badge low">
+                    LOW
                   </span>
                   <span *ngIf="getValueStatus(item) === 'high'" 
-                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                        class="status-badge high">
                     HIGH
                   </span>
                 </div>
@@ -66,8 +68,8 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
                 <div class="flex items-center space-x-2">
                   <span>{{ getDisplayReferenceRange(item) }}</span>
                   <span *ngIf="isUsingFallbackRange(item)" 
-                        class="inline-flex items-center px-1 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-                        title="Using medical standard range (OCR may have failed)">
+                        class="status-badge standard"
+                        title="Using medical standard range (OCR extraction failed for this marker)">
                     STANDARD
                   </span>
                 </div>
@@ -139,17 +141,42 @@ export class DataTableComponent {
   }
 
   getDisplayReferenceRange(item: HealthMarker): string {
-    // If OCR range is incomplete, use fallback
-    if (this.labMarkerService.isReferenceRangeIncomplete(item.reference_range || '')) {
-      const fallback = this.labMarkerService.getFallbackReferenceRange(item.marker || '');
-      return fallback || item.reference_range || 'N/A';
+    // FIXED: Prioritize OCR ranges for display, only use fallback if truly not recognized
+    const ocrRange = item.reference_range || '';
+    
+    // If we have a valid OCR range, always use it for display
+    if (ocrRange && !this.labMarkerService.isReferenceRangeIncomplete(ocrRange)) {
+      return ocrRange;
     }
-    return item.reference_range || 'N/A';
+    
+    // Only if OCR truly failed, then show fallback range
+    const fallback = this.labMarkerService.getFallbackReferenceRange(item.marker || '');
+    if (fallback) {
+      return fallback;
+    }
+    
+    // Last resort: show whatever OCR gave us or N/A
+    return ocrRange || 'N/A';
   }
 
   isUsingFallbackRange(item: HealthMarker): boolean {
-    return this.labMarkerService.isReferenceRangeIncomplete(item.reference_range || '') &&
+    const ocrRange = item.reference_range || '';
+    return this.labMarkerService.isReferenceRangeIncomplete(ocrRange) &&
            !!this.labMarkerService.getFallbackReferenceRange(item.marker || '');
+  }
+
+  // NEW: Get the range to use for value comparison (OCR only!)
+  private getComparisonReferenceRange(item: HealthMarker): string | null {
+    // FIXED: Only use OCR ranges for out-of-range comparison
+    // Never use fallback ranges for highlighting - only what OCR actually extracted
+    const ocrRange = item.reference_range || '';
+    
+    // If OCR range is missing or clearly invalid, don't highlight anything
+    if (!ocrRange || this.labMarkerService.isReferenceRangeIncomplete(ocrRange)) {
+      return null;
+    }
+    
+    return ocrRange;
   }
 
   getValueColor(item: HealthMarker): string {
@@ -176,7 +203,11 @@ export class DataTableComponent {
   }
 
   getValueStatus(item: HealthMarker): 'normal' | 'watch' | 'high' {
-    if (!item.reference_range || !item.value) {
+    // FIXED: Only use OCR ranges for out-of-range comparison
+    const comparisonRange = this.getComparisonReferenceRange(item);
+    
+    // If no valid OCR range or no value, don't highlight
+    if (!comparisonRange || !item.value) {
       return 'normal';
     }
 
@@ -185,26 +216,19 @@ export class DataTableComponent {
       return 'normal';
     }
 
-    // Use the display range (which includes fallback if needed)
-    const refRange = this.getDisplayReferenceRange(item);
-    
-    if (!refRange || refRange === 'N/A') {
-      return 'normal';
-    }
-
-    console.log(`Checking value ${value} against range "${refRange}" for marker "${item.marker}"`);
+    console.log(`Checking value ${value} against OCR range "${comparisonRange}" for marker "${item.marker}"`);
 
     // Skip ranges that are incomplete or contain descriptive text
-    if (refRange.includes('...') || 
-        refRange.includes('depending') || 
-        refRange.includes('for males') || 
-        refRange.includes('for females')) {
+    if (comparisonRange.includes('...') || 
+        comparisonRange.includes('depending') || 
+        comparisonRange.includes('for males') || 
+        comparisonRange.includes('for females')) {
       console.log('Result: Skipping complex/incomplete range');
       return 'normal';
     }
 
     // Case 1: Standard range like "70.0 - 100.0" or "75 - 200"
-    let match = refRange.match(/^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/);
+    let match = comparisonRange.match(/^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/);
     if (match) {
       const min = parseFloat(match[1]);
       const max = parseFloat(match[2]);
@@ -222,7 +246,7 @@ export class DataTableComponent {
     }
 
     // Case 2: Less than like "<100" or "< 100"
-    match = refRange.match(/^<\s*(\d+(?:\.\d+)?)$/);
+    match = comparisonRange.match(/^<\s*(\d+(?:\.\d+)?)$/);
     if (match) {
       const max = parseFloat(match[1]);
       console.log(`Upper bound only: < ${max}, value: ${value}`);
@@ -235,7 +259,7 @@ export class DataTableComponent {
     }
 
     // Case 3: Greater than like ">40" or "> 40"
-    match = refRange.match(/^>\s*(\d+(?:\.\d+)?)$/);
+    match = comparisonRange.match(/^>\s*(\d+(?:\.\d+)?)$/);
     if (match) {
       const min = parseFloat(match[1]);
       console.log(`Lower bound only: > ${min}, value: ${value}`);
@@ -248,7 +272,7 @@ export class DataTableComponent {
     }
 
     // Case 4: Complex ranges like "<6 - 6.0" (malformed, treat as upper bound)
-    match = refRange.match(/^<\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/);
+    match = comparisonRange.match(/^<\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/);
     if (match) {
       const max = parseFloat(match[2]);
       console.log(`Malformed range treated as upper bound: < ${max}, value: ${value}`);
