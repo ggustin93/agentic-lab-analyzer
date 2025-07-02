@@ -83,3 +83,8 @@ logs/
 # Local data/uploads
 backend/uploads/
 backend/data/
+backend/.venv/
+
+.github/*
+
+__pycache__/*
