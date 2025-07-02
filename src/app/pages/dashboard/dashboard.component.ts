@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
+import { Observable } from 'rxjs';
 import { DocumentAnalysisService } from '../../services/document-analysis.service';
 import { UploadZoneComponent } from '../../components/upload-zone/upload-zone.component';
 import { DocumentListComponent } from '../../components/document-list/document-list.component';
@@ -65,8 +65,7 @@ import { HealthDocument } from '../../models/document.model';
           <!-- Document List -->
           <div class="max-w-4xl mx-auto">
             <app-document-list 
-              [documents]="documents"
-              (deleteDocument)="onDeleteDocument($event)">
+              [documents]="(documents$ | async) || []">
             </app-document-list>
           </div>
         </div>
@@ -74,54 +73,26 @@ import { HealthDocument } from '../../models/document.model';
     </div>
   `
 })
-export class DashboardComponent implements OnInit, OnDestroy {
-  documents: HealthDocument[] = [];
+export class DashboardComponent {
+  public readonly documents$: Observable<HealthDocument[]> = this.documentService.documents$;
   isUploading = false;
-  private destroy$ = new Subject<void>();
 
   constructor(private documentService: DocumentAnalysisService) {}
-
-  ngOnInit(): void {
-    this.documentService.documents$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(documents => {
-        this.documents = documents;
-      });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
 
   onFileSelected(file: File): void {
     this.isUploading = true;
     
     this.documentService.uploadDocument(file)
-      .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (documentId) => {
-          console.log('Document uploaded successfully:', documentId);
+        next: (response) => {
+          console.log('Document upload initiated:', response);
+          // The UI will update reactively via the stream
           this.isUploading = false;
         },
         error: (error) => {
           console.error('Upload failed:', error);
           this.isUploading = false;
           alert('Upload failed. Please try again.');
-        }
-      });
-  }
-
-  onDeleteDocument(documentId: string): void {
-    this.documentService.deleteDocument(documentId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          console.log('Document deleted successfully');
-        },
-        error: (error) => {
-          console.error('Delete failed:', error);
-          alert('Failed to delete document. Please try again.');
         }
       });
   }

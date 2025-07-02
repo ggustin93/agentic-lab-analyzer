@@ -1,6 +1,6 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ExtractedHealthData } from '../../models/document.model';
+import { HealthMarker } from '../../models/document.model';
 
 @Component({
   selector: 'app-data-table',
@@ -27,14 +27,15 @@ import { ExtractedHealthData } from '../../models/document.model';
               <td class="font-medium">{{ item.marker }}</td>
               <td>{{ item.value }}</td>
               <td>{{ item.unit || '-' }}</td>
-              <td>{{ item.referenceRange || '-' }}</td>
+              <td>{{ item.reference_range || '-' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
-  `
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DataTableComponent {
-  @Input() data: ExtractedHealthData[] = [];
+  @Input() data: HealthMarker[] = [];
 }
