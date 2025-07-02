@@ -54,7 +54,10 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Processing...
+                  <span>
+                    {{ getProcessingStageText(document) }}
+                    <span class="text-xs ml-1">{{ document.progress || 0 }}%</span>
+                  </span>
                 </span>
                 <span *ngIf="document.status === DocumentStatus.COMPLETE" class="flex items-center">
                   <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -77,9 +80,12 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
               </button>
               
               <button (click)="onDeleteDocument(document.id)"
-                      class="text-gray-400 hover:text-red-600 transition-colors duration-150">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9zM4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6.5l1.5 1.5A2 2 0 0115 17H5a2 2 0 01-1.5-3.5L5 11.5V5zM5 11.5V17h10v-5.5l-1.5-1.5H6.5L5 11.5z" clip-rule="evenodd"/>
+                      class="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all duration-150"
+                      title="Delete document">
+                <!-- Hero Icons - Trash Can -->
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
               </button>
             </div>
@@ -114,25 +120,53 @@ export class DocumentListComponent {
   }
 
   getRelativeTime(dateString: string): string {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    if (!dateString) return 'Unknown date';
     
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} hours ago`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} days ago`;
-    
-    return date.toLocaleDateString();
+    try {
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      
+      const now = new Date();
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      
+      if (diffInMinutes < 1) return 'Just now';
+      if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+      
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      if (diffInHours < 24) return `${diffInHours} hours ago`;
+      
+      const diffInDays = Math.floor(diffInHours / 24);
+      if (diffInDays < 7) return `${diffInDays} days ago`;
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error('Error parsing date:', dateString, error);
+      return 'Invalid date';
+    }
   }
 
   onDeleteDocument(documentId: string): void {
     if (confirm('Are you sure you want to delete this document analysis?')) {
       this.deleteDocument.emit(documentId);
+    }
+  }
+  
+  getProcessingStageText(document: HealthDocument): string {
+    if (!document.processing_stage) return 'Processing...';
+    
+    switch (document.processing_stage) {
+      case 'ocr_extraction':
+        return 'Extracting text...';
+      case 'ai_analysis':
+        return 'Analyzing data...';
+      case 'saving_results':
+        return 'Finalizing...';
+      default:
+        return 'Processing...';
     }
   }
 }
