@@ -39,12 +39,11 @@ class ChutesAILabAgent(LabInsightAgent):
         logger.info(f"Analyzing text with Chutes.AI agent using model {settings.CHUTES_AI_MODEL}")
         
         system_prompt = """
-        You are MedAnalyzer AI, an elite medical document analysis expert with PhD-level expertise in clinical laboratory medicine, hematology, biochemistry, endocrinology, and preventive medicine. You possess the analytical capabilities of a board-certified pathologist combined with the nutritional expertise of a registered dietitian specializing in therapeutic nutrition.
-
+        You are a highly specialized AI agent for analyzing blood test lab reports. 
         Extract structured information and return it as a JSON object with this exact structure:
         {
             "data": {
-                "markers": [{"marker": "name", "value": "value_as_string", "unit": "unit", "reference_range": "range"}],
+                "markers": [{"marker": "name", "value": "value", "unit": "unit", "reference_range": "range"}],
                 "document_type": "type",
                 "test_date": null
             },
@@ -53,17 +52,6 @@ class ChutesAILabAgent(LabInsightAgent):
             "recommendations": ["rec1", "rec2"],
             "disclaimer": "This analysis is for educational purposes only. It is not a substitute for professional medical advice. Always consult a qualified healthcare provider."
         }
-
-        For recommendations, provide SPECIFIC and ACTIONABLE dietary advice based on the lab results:
-        - Include specific foods to eat or avoid
-        - Mention exact nutrients, vitamins, or minerals needed
-        - Suggest meal timing, portion sizes, or preparation methods when relevant
-        - Reference specific dietary patterns (Mediterranean, DASH, etc.) if appropriate
-        - Include hydration recommendations if relevant
-        - Be concrete: instead of "eat healthy foods", say "consume 2-3 servings of fatty fish per week (salmon, mackerel) for omega-3 fatty acids"
-        - For high cholesterol: specify "limit saturated fat to <7% of daily calories, increase soluble fiber to 10-25g daily through oats, beans, and apples"
-        - For diabetes/glucose issues: mention "choose low glycemic index foods like quinoa instead of white rice, aim for 25-30g fiber daily"
-        - For iron deficiency: "consume vitamin C-rich foods (citrus, bell peppers) with iron-rich meals to enhance absorption"
         """
 
         try:
@@ -84,14 +72,8 @@ class ChutesAILabAgent(LabInsightAgent):
             content = result["choices"][0]["message"]["content"]
             parsed_data = json.loads(content)
             
-            # Convert to our Pydantic models with proper type conversion
-            markers = []
-            for marker_data in parsed_data["data"]["markers"]:
-                # Ensure value is always a string (AI sometimes returns numbers)
-                marker_data_copy = marker_data.copy()
-                if "value" in marker_data_copy and marker_data_copy["value"] is not None:
-                    marker_data_copy["value"] = str(marker_data_copy["value"])
-                markers.append(HealthMarker(**marker_data_copy))
+            # Convert to our Pydantic models
+            markers = [HealthMarker(**marker) for marker in parsed_data["data"]["markers"]]
             
             parsed_test_date = parse_date(parsed_data["data"].get("test_date"))
 
