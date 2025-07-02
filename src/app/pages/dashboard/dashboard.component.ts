@@ -1,6 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, computed, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable, map, Subscription } from 'rxjs';
 import { DocumentAnalysisService } from '../../services/document-analysis.service';
 import { UploadZoneComponent } from '../../components/upload-zone/upload-zone.component';
 import { DocumentListComponent } from '../../components/document-list/document-list.component';
@@ -10,6 +9,7 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, UploadZoneComponent, DocumentListComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="min-h-screen bg-gray-50">
       <!-- Header -->
@@ -125,16 +125,16 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
             
             <app-upload-zone 
               (fileSelected)="onFileSelected($event)"
-              [isUploading]="shouldShowProgress(processingDocument$ | async)"
-              [progress]="getUploadProgress(processingDocument$ | async)"
-              [processingStage]="getProcessingStage(processingDocument$ | async)">
+              [isUploading]="shouldShowProgress()"
+              [progress]="getUploadProgress()"
+              [processingStage]="getProcessingStage()">
             </app-upload-zone>
           </div>
 
           <!-- Document List -->
           <div class="max-w-4xl mx-auto">
             <app-document-list 
-              [documents]="(documents$ | async) || []"
+              [documents]="documents()"
               (deleteDocument)="onDeleteDocument($event)">
             </app-document-list>
           </div>
@@ -143,97 +143,91 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
     </div>
   `
 })
-export class DashboardComponent implements OnInit, OnDestroy {
-  public readonly documents$: Observable<HealthDocument[]> = this.documentService.documents$;
+export class DashboardComponent implements OnInit {
+  // Modern inject() pattern instead of constructor injection
+  private documentService = inject(DocumentAnalysisService);
   
-  // Real-time reactive observables for upload progress
-  public readonly processingDocument$: Observable<HealthDocument | null> = this.documents$.pipe(
-    map(documents => {
-      // Find the most recently uploaded document that's still processing
-      const processingDocs = documents.filter(doc => doc.status === DocumentStatus.PROCESSING);
-      return processingDocs.length > 0 ? processingDocs[0] : null;
-    })
-  );
+  // Access signals from the service
+  public readonly documents = this.documentService.documents;
+  
+  // Computed signals for derived state (replaces RxJS pipes)
+  public readonly processingDocument = computed(() => {
+    // Find the most recently uploaded document that's still processing
+    const processingDocs = this.documents().filter(doc => doc.status === DocumentStatus.PROCESSING);
+    return processingDocs.length > 0 ? processingDocs[0] : null;
+  });
   
   // Track if any document is currently being processed (for UI state)
-  public readonly isProcessing$: Observable<boolean> = this.processingDocument$.pipe(
-    map(doc => doc !== null)
-  );
+  public readonly isProcessing = computed(() => this.processingDocument() !== null);
 
-  private subscription: Subscription = new Subscription();
-
-  constructor(private documentService: DocumentAnalysisService) {}
-
-  ngOnInit(): void {
-    // Enhanced real-time logging for debugging progress and stage updates
-    this.subscription.add(
-      this.processingDocument$.subscribe(doc => {
-        if (doc) {
-          console.log(`📊 DASHBOARD - Real-time update for ${doc.filename}:`);
-          console.log(`   📈 Progress: ${doc.progress || 0}%`);
-          console.log(`   🔄 Stage: "${doc.processing_stage || 'unknown'}"`);
-          console.log(`   ⚡ Status: ${doc.status}`);
-          console.log(`   🆔 Document ID: ${doc.id}`);
-        } else {
-          console.log(`📊 DASHBOARD - No processing document found`);
-        }
-      })
-    );
+  constructor() {
+    // Enhanced real-time logging using effects (replaces manual subscriptions)
+    effect(() => {
+      const doc = this.processingDocument();
+      if (doc) {
+        console.log(`📊 DASHBOARD - Real-time update for ${doc.filename}:`);
+        console.log(`   📈 Progress: ${doc.progress || 0}%`);
+        console.log(`   🔄 Stage: "${doc.processing_stage || 'unknown'}"`);
+        console.log(`   ⚡ Status: ${doc.status}`);
+        console.log(`   🆔 Document ID: ${doc.id}`);
+      } else {
+        console.log(`📊 DASHBOARD - No processing document found`);
+      }
+    });
     
     // Also log all documents for debugging
-    this.subscription.add(
-      this.documents$.subscribe(docs => {
-        const processingCount = docs.filter(d => d.status === DocumentStatus.PROCESSING).length;
-        console.log(`📋 DASHBOARD - Documents updated: ${docs.length} total, ${processingCount} processing`);
-      })
-    );
+    effect(() => {
+      const docs = this.documents();
+      const processingCount = docs.filter(d => d.status === DocumentStatus.PROCESSING).length;
+      console.log(`📋 DASHBOARD - Documents updated: ${docs.length} total, ${processingCount} processing`);
+    });
   }
 
-  ngOnDestroy(): void {
-    this.subscription.unsubscribe();
+  ngOnInit(): void {
+    // No manual subscription management needed with signals!
+    console.log('🚀 Dashboard initialized with signal-based state management');
   }
+
+  // No ngOnDestroy needed - effects are automatically cleaned up!
 
   onFileSelected(file: File): void {
     console.log('🚀 Starting upload for:', file.name);
     
     this.documentService.uploadDocument(file)
       .subscribe({
-        next: (response) => {
-          console.log('✅ Upload initiated successfully:', response);
-          // No local state management - let the reactive stream handle everything
+        next: (uploadResponse) => {
+          console.log('✅ Upload successful:', uploadResponse);
+          console.log('🔄 Starting real-time progress monitoring...');
         },
         error: (error) => {
           console.error('❌ Upload failed:', error);
-          alert('Upload failed. Please try again.');
         }
       });
   }
 
   onDeleteDocument(documentId: string): void {
+    console.log('🗑️ Deleting document:', documentId);
     this.documentService.deleteDocument(documentId)
       .subscribe({
-        next: (response) => {
-          console.log('🗑️ Document deleted successfully:', response);
+        next: () => {
+          console.log('✅ Document deleted successfully');
         },
         error: (error) => {
-          console.error('❌ Delete failed:', error);
-          alert('Failed to delete document. Please try again.');
+          console.error('❌ Failed to delete document:', error);
         }
       });
   }
 
-  // Helper method to get upload progress for the current upload
-  getUploadProgress(processingDocument: HealthDocument | null): number | undefined {
-    return processingDocument?.progress ?? undefined;
+  // Simplified methods using computed signals instead of RxJS pipes
+  getUploadProgress(): number | undefined {
+    return this.processingDocument()?.progress;
   }
 
-  // Helper method to get processing stage for the current upload
-  getProcessingStage(processingDocument: HealthDocument | null): string | undefined {
-    return processingDocument?.processing_stage ?? undefined;
+  getProcessingStage(): string | undefined {
+    return this.processingDocument()?.processing_stage;
   }
 
-  // Check if we should show upload progress
-  shouldShowProgress(processingDocument: HealthDocument | null): boolean {
-    return processingDocument !== null && processingDocument.status === DocumentStatus.PROCESSING;
+  shouldShowProgress(): boolean {
+    return this.processingDocument() !== null;
   }
 }
