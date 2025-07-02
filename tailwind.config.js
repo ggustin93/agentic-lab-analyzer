@@ -5,6 +5,12 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'sans': ['Inter', 'system-ui', 'sans-serif'],
+        'medical': ['Source Sans Pro', 'Inter', 'system-ui', 'sans-serif'],
+        'body': ['Inter', 'system-ui', 'sans-serif'],
+        'heading': ['Source Sans Pro', 'Inter', 'system-ui', 'sans-serif'],
+      },
       colors: {
         primary: {
           50: '#eff6ff',

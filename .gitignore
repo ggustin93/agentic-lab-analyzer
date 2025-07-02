@@ -1,11 +1,85 @@
-.angular
-dist
-node_modules
+# IDEs / Editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+
+# OS-specific
+.DS_Store
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Environments
 .env
-/tmp
-/coverage
+.venv
+env/
+venv/
+ENV/
+backend/.venv/
+
+# Distribution / packaging
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+sdist/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.hypothesis/
+nosetests.xml
+coverage.xml
+*.cover
+
+# --- Node / Angular ---
+.angular/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+
+# --- Project Specific ---
+# Taskmaster & Cursor
+.taskmaster/
+.cursor/
+
+# Logs & Temp
+logs/
 *.log
-/backend/.env
-/DOCS
-DOCS/
-DOCS/*
+/tmp/
+/coverage/
+
+# Documentation build output
+/DOCS/
+
+# Local data/uploads
+backend/uploads/
+backend/data/

@@ -1,6 +1,41 @@
+@import 'tippy.js/dist/tippy.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Professional Medical Typography */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    font-variation-settings: 'opsz' 32;
+  }
+  
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Source Sans Pro', 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  
+  .medical-text {
+    font-family: 'Source Sans Pro', 'Inter', system-ui, sans-serif;
+    font-weight: 400;
+  }
+  
+  .brand-text {
+    font-family: 'Source Sans Pro', 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}
 
 /* Custom component styles */
 @layer components {
@@ -84,4 +119,105 @@
 
 .markdown-content strong {
   @apply font-semibold text-gray-800;
+}
+
+/* Math formula styles */
+.math-formula {
+  font-family: 'KaTeX_Math', 'Times New Roman', serif;
+  font-size: 0.9rem;
+}
+
+/* Professional Medical Tooltip Styles */
+.tippy-box[data-theme~='medical'] {
+  background: linear-gradient(135deg, #1e293b, #334155);
+  border: 1px solid #475569;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  backdrop-filter: blur(8px);
+}
+
+.tippy-box[data-theme~='medical'] .tippy-content {
+  padding: 16px 20px;
+  color: #f1f5f9;
+}
+
+.tippy-box[data-theme~='medical'] .tippy-arrow {
+  color: #1e293b;
+}
+
+/* Medical tooltip content styling */
+.medical-tooltip h4 {
+  color: #60a5fa;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  font-size: 0.9rem;
+}
+
+.medical-tooltip .description {
+  color: #e2e8f0;
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.medical-tooltip .clinical-info {
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid #3b82f6;
+  padding: 8px 12px;
+  margin: 8px 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.medical-tooltip .clinical-info strong {
+  color: #60a5fa;
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.medical-tooltip .clinical-info p {
+  color: #cbd5e1;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.medical-tooltip .range-info {
+  background: rgba(34, 197, 94, 0.1);
+  border-left: 3px solid #22c55e;
+  padding: 6px 10px;
+  margin-top: 8px;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.75rem;
+  color: #86efac;
+}
+
+.medical-tooltip .badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
+.medical-tooltip .badge.standard {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c4b5fd;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.medical-tooltip .range-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2386efac'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  vertical-align: text-bottom;
 }
