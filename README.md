@@ -1,23 +1,22 @@
-# AI-Powered Health Document Analyzer
+# Lab Insight Engine
 
-This project is a full-stack application designed to analyze health documents using a modern, agent-based architecture. The system provides secure document uploads, performs OCR and AI-driven analysis, and delivers results to a responsive frontend via real-time streaming. Documents and analysis data are persisted using Supabase.
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/ggustin93/agentic-lab-analyzer)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](docker-compose.yml)
 
-## ⚠️ Security Notice: MVP Configuration
-> **Note**: The current security configuration is for MVP development purposes only. The Supabase bucket is public and Row Level Security (RLS) is not yet enabled on the database tables. This is a known issue tracked for resolution before any production deployment. Implementing proper authentication and authorization policies is a critical next step.
+A modern, agent-based platform for analyzing medical lab documents with AI-powered insights. This full-stack application provides secure document uploads, performs OCR and intelligent analysis, and delivers structured results through a responsive frontend.
 
-## Core Features
+## 🚀 Key Features
 
-*   **Secure Document Upload**: Handles PDF, PNG, and JPG files, with storage managed by Supabase.
-*   **Hybrid Processing**: Currently uses cloud-based services (Mistral OCR, Chutes.AI) with a roadmap for fully local alternatives.
-*   **Persistent Storage**: Uses Supabase Cloud for PostgreSQL database and file storage.
-*   **Agent-Based Backend**: Orchestrates specialized AI agents for OCR and insight extraction.
-*   **Real-Time Updates**: Uses Server-Sent Events (SSE) to stream analysis progress.
-*   **Containerized Environment**: Fully dockerized for simple, one-command setup and deployment.
-*   **CI/CD Ready**: Includes a GitHub Actions workflow for automated checks.
+- **Intelligent Document Processing**: Upload lab reports (PDF, PNG, JPG) and receive structured data extraction with AI-powered insights
+- **Agent-Based Architecture**: Modular system with specialized AI agents for OCR and lab data analysis
+- **Real-Time Processing**: Monitor document processing status via Server-Sent Events (SSE)
+- **Persistent Storage**: Automatic saving of documents and analysis results for future reference
+- **Responsive UI**: Clean, modern interface built with Angular 19 and Tailwind CSS
 
-## Architecture Overview
+## 🏗️ Architecture
 
-The system employs a decoupled architecture. The FastAPI backend serves a versioned REST API and communicates with the Supabase platform for data and file persistence.
+The system employs a decoupled architecture with three main components:
 
 ```
 ┌───────────────────────┐      ┌───────────────────────────┐      ┌─────────────────────────┐
@@ -39,89 +38,80 @@ The system employs a decoupled architecture. The FastAPI backend serves a versio
                      └───────────┘   └───────────┘
 ```
 
-The backend's `DocumentProcessor` orchestrates two key agents:
-1.  **`OCRExtractorAgent`**: A protocol for services that extract text from a document.
-2.  **`LabInsightAgent`**: A protocol for services that analyze text to generate structured insights.
+### Backend Design Patterns
 
-This design promotes modularity, testability, and separation of concerns.
+- **Protocol-Based Agents**: OCR and analysis services implement common interfaces for easy swapping
+- **Orchestrator Pattern**: `DocumentProcessor` coordinates workflow while remaining decoupled from specific implementations
+- **Secure Configuration**: Environment-based secrets management with Pydantic
+- **Versioned API**: Clear `/api/v1/` structure for future extensibility
 
-## Current Implementation vs. Future Roadmap
+### Frontend Design Patterns
 
-### Current MVP Implementation
+- **Smart Service/Presentational Components**: Business logic in services, display logic in components
+- **RxJS State Management**: Reactive data flow without heavy state libraries
+- **OnPush Change Detection**: Optimized rendering cycles
+- **Lazy Loading**: Improved initial load performance
 
-The current MVP uses a hybrid approach with the following cloud-based components:
+## 🔄 Current Implementation vs. Future Roadmap
 
-| Component | Current Implementation | Processing Location |
-|-----------|------------------------|---------------------|
-| OCR Engine | Mistral AI | Cloud API |
-| Analysis Engine | Chutes.AI with Mistral | Decentralized Cloud |
-| Database & Storage | Supabase Cloud | Cloud Service |
-
-### Roadmap: Local-First Architecture
-
-A key goal of this project is to transition to a fully local-first architecture:
-
-| Component | Current | Planned Local Alternative | Status |
-|-----------|---------|---------------------------|--------|
-| OCR Engine | Mistral AI | docTR (local ML model) | In Development |
+| Component | Current (MVP) | Planned Evolution | Status |
+|-----------|---------------|-------------------|--------|
+| OCR Engine | Mistral AI | docTR (local ML) | In Development |
 | Analysis Engine | Chutes.AI | Ollama (local LLM) | Planned |
-| Database & Storage | Supabase Cloud | Self-hosted Supabase | Planned |
+| Storage | Supabase Cloud | Self-hosted Supabase | Planned |
+| Updates | SSE | WebSockets | Planned |
 
-The application will include a settings interface to toggle between cloud and local processing options, allowing users to prioritize either performance or privacy according to their needs.
+## ⚙️ Tech Stack
 
-## Tech Stack
+- **Frontend**: Angular 19, TypeScript, RxJS, Tailwind CSS
+- **Backend**: Python 3.11, FastAPI, Pydantic
+- **Database & Storage**: Supabase (PostgreSQL)
+- **AI Services**: Mistral AI (OCR), Chutes.AI (Analysis)
+- **DevOps**: Docker, Docker Compose, GitHub Actions
 
-*   **Frontend**: Angular 19, TypeScript, RxJS, Tailwind CSS
-*   **Backend**: Python 3.11, FastAPI, Pydantic
-*   **Database & Storage**: Supabase (PostgreSQL, Supabase Storage)
-*   **AI Services**: 
-    * Current: Mistral AI (OCR), Chutes.AI (Insights)
-    * Planned: docTR (local OCR), Ollama (local LLM)
-*   **Tooling**: Docker, Docker Compose, GitHub Actions
+## ⚠️ Security Notice: MVP Configuration
 
-## Local Development
+> **Note**: The current security configuration is for MVP development purposes only. The Supabase bucket is public and Row Level Security (RLS) is not yet enabled. This is a known issue tracked for resolution before production deployment.
+
+## 🚀 Getting Started
 
 ### Prerequisites
-*   Docker & Docker Compose
-*   A Supabase account
-*   API keys for Mistral AI and Chutes.AI (required for current implementation)
 
-### 1. Set up Supabase
-1.  Create a new project on [Supabase](https://app.supabase.com/).
-2.  Inside your project, go to the **Storage** section and create a new **public bucket** named `health_documents`.
-3.  Go to the **Project Settings -> API** section and get your Project URL and `service_role` key.
+- Docker & Docker Compose
+- Supabase account
+- API keys for Mistral AI and Chutes.AI
 
-### 2. Configure Environment
+### Quick Setup
 
-Create a `.env` file in the `backend/` directory with your Supabase credentials:
+1. **Set up Supabase**
+   - Create a new Supabase project
+   - Create a public bucket named `health_documents`
+   - Get your Project URL and `service_role` key
 
-```dotenv
-# backend/.env
+2. **Configure Environment**
+   ```bash
+   # backend/.env
+   SUPABASE_URL="your_project_url"
+   SUPABASE_KEY="your_service_role_key"
+   MISTRAL_API_KEY="your_mistral_api_key"
+   CHUTES_AI_API_KEY="your_chutes_ai_key"
+   ```
 
-# Supabase Credentials
-SUPABASE_URL="your_project_url"
-SUPABASE_KEY="your_service_role_key" # Important: Use the service_role key for backend operations
+3. **Launch the Application**
+   ```bash
+   docker-compose up --build
+   ```
+   
+   Access the frontend at `http://localhost:4200` and the API at `http://localhost:8000`
 
-# AI Services (required for current implementation)
-MISTRAL_API_KEY="your_mistral_api_key"
-CHUTES_AI_API_KEY="your_chutes_ai_key"
-```
+## 🛣️ Roadmap
 
-### 3. Run the Application
+- **Local-First Processing**: Complete local ML/LLM alternatives for privacy-focused deployment
+- **Enhanced Security**: Enable RLS and implement proper authentication
+- **WebSocket Communication**: Replace SSE with bidirectional WebSockets
+- **Application Monitoring**: Add Prometheus/Grafana integration
+- **Multi-Tenant Support**: Enable multi-user functionality with proper isolation
 
-From the project root, start the services:
+## 📝 License
 
-```bash
-docker-compose up --build
-```
-The frontend is available at `http://localhost:4200`, and the backend API is exposed on `http://localhost:8000`.
-
-## Next Steps
-
-Future development will focus on enhancing modularity, privacy, and observability:
-
-*   **Local AI Agents**: Complete implementation of agents that use local models (docTR, Ollama) for offline capability.
-*   **Settings Interface**: Add UI for toggling between cloud and local processing options.
-*   **Self-hosted Supabase**: Add support for connecting to a self-hosted Supabase instance.
-*   **WebSocket Communication**: Transition from SSE to WebSockets to enable features like task cancellation.
-*   **Application Monitoring**: Integrate tools like Prometheus and Grafana for performance monitoring.
+This project is licensed under the MIT License - see the LICENSE file for details.
