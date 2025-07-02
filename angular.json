@@ -26,13 +26,15 @@
             }
           },
           "options": {
-            "assets": [],
+            "assets": ["src/favicon.ico", "src/assets"],
             "index": "src/index.html",
             "main": "src/main.ts",
             "outputPath": "dist/demo",
-            "polyfills": ["zone.js"],
             "scripts": [],
-            "styles": ["src/global_styles.css"],
+            "styles": [
+              "node_modules/katex/dist/katex.min.css",
+              "src/global_styles.css"
+            ],
             "tsConfig": "tsconfig.app.json"
           }
         },
