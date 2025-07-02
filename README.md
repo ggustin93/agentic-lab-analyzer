@@ -1,93 +1,81 @@
-# Lab Analyzer
+# AI-Powered Health Document Analyzer
 
-A full-stack application for analyzing health documents using AI. It features a FastAPI backend with an agent-based architecture and an Angular 20 frontend for data visualization and real-time updates.
+This project is a full-stack application designed to analyze health documents using a modern, agent-based architecture. The system provides secure document uploads, performs OCR and AI-driven analysis, and delivers results to a responsive frontend via real-time streaming.
 
-## Features
+## Core Features
 
-*   Secure document upload (PDF, PNG, JPG).
-*   Real-time analysis status updates using Server-Sent Events (SSE).
-*   AI-powered text extraction (OCR) and structured insight generation.
-*   Clear data visualization for extracted health markers.
-*   Containerized for easy setup and deployment with Docker.
-*   CI/CD pipeline for automated testing and validation.
+*   **Secure Document Upload**: Handles PDF, PNG, and JPG files.
+*   **Agent-Based Backend**: Orchestrates specialized AI agents for OCR and insight extraction.
+*   **Real-Time Updates**: Uses Server-Sent Events (SSE) to stream analysis progress.
+*   **Containerized Environment**: Fully dockerized for simple, one-command setup and deployment.
+*   **CI/CD Ready**: Includes a GitHub Actions workflow for automated checks.
 
-## Architecture
+## Architecture Overview
 
-The system uses a decoupled frontend/backend architecture communicating via a versioned REST API.
+The system employs a decoupled architecture with a versioned REST API separating the frontend and backend.
 
 ```
-┌───────────────────────────┐      ┌───────────────────────────┐
-│     Angular 20 Frontend   │      │      FastAPI Backend      │
-│ (Performance-Optimized)   │      │      (Agent-Based)        │
-├───────────────────────────┤      ├───────────────────────────┤
-│ - UploadZone Component    │      │                           │
-│ - DocumentList (OnPush)   │      │  /api/v1/documents/upload │
-│ - DataTable (OnPush)      │◄─────┼───────────────────────────┤
-│ - SSE Service for Real-   │      │                           │
-│   Time Updates            │      │  /api/v1/documents/:id/stream (SSE)
-└───────────────────────────┘      ├───────────────────────────┤
-                                   │                           │
-                                   │      DocumentProcessor    │
-                                   │     (Orchestrator)        │
-                                   ├─────────────┬─────────────┤
-                                   │             │             │
-                                   ▼             ▼             │
-                         ┌───────────┐   ┌───────────┐
-                         │ OCRExtractor│   │ LabInsight  │
-                         │ Agent       │   │ Agent       │
-                         └───────────┘   └───────────┘
+┌───────────────────────┐      ┌───────────────────────────┐
+│   Angular 19 Frontend │      │      FastAPI Backend      │
+│ (OnPush, Async Pipe)  │      │      (Agent-Based)        │
+├───────────────────────┤      ├───────────────────────────┤
+│ - Document Upload     │      │  POST /api/v1/docs/upload │
+│ - Real-Time View      │◄─────┼───────────────────────────┤
+│   (via EventSource)   │      │  GET  /api/v1/docs/:id/stream (SSE)
+└───────────────────────┘      ├───────────────────────────┤
+                               │      DocumentProcessor    │
+                               │     (Orchestrator)        │
+                               ├─────────────┬─────────────┤
+                               │             │             │
+                               ▼             ▼             │
+                     ┌───────────┐   ┌───────────┐
+                     │ OCRExtractor│   │ LabInsight  │
+                     │ Agent       │   │ Agent       │
+                     └───────────┘   └───────────┘
 ```
 
-The backend employs an agent-based design where a `DocumentProcessor` orchestrates two specialized agents:
-1.  **`OCRExtractorAgent`**: Extracts text from documents.
-2.  **`LabInsightAgent`**: Analyzes text and generates structured health insights.
+The backend's `DocumentProcessor` orchestrates two key agents:
+1.  **`OCRExtractorAgent`**: A protocol for services that extract text from a document.
+2.  **`LabInsightAgent`**: A protocol for services that analyze text to generate structured insights.
 
-This design promotes separation of concerns, making the system more modular and testable.
+This design promotes modularity, testability, and separation of concerns.
 
 ## Tech Stack
 
 *   **Frontend**: Angular 19, TypeScript, RxJS, Tailwind CSS
 *   **Backend**: Python 3.11, FastAPI, Pydantic
 *   **AI Services**: Mistral AI (OCR), Chutes.AI (Insights)
-*   **Tooling**: Docker, Docker Compose, GitHub Actions, Ruff, Pytest
+*   **Tooling**: Docker, Docker Compose, GitHub Actions
 
-## Getting Started
-
-This project is fully containerized for a "one-command" setup.
+## Local Development
 
 ### Prerequisites
-*   Docker and Docker Compose
-*   An API key for Mistral AI and Chutes.AI
+*   Docker & Docker Compose
+*   API keys for Mistral AI and Chutes.AI
 
-### 1. Create Environment File
+### 1. Configure Environment
 
-Create a file named `.env` inside the `backend/` directory with your API keys:
+Create a `.env` file in the `backend/` directory:
 
 ```dotenv
 # backend/.env
-MISTRAL_API_KEY="your_mistral_api_key_here"
-CHUTES_AI_API_KEY="your_chutes_ai_api_key_here"
+MISTRAL_API_KEY="your_mistral_api_key"
+CHUTES_AI_API_KEY="your_chutes_ai_key"
 ```
 
-### 2. Run with Docker Compose
+### 2. Run the Application
 
-From the project root, execute:
+From the project root, start the services:
 
 ```bash
 docker-compose up --build
 ```
-The application will be available at `http://localhost:4200`.
-
-## API Endpoints (v1)
-
-| Method | Endpoint                             | Description                                            |
-|--------|--------------------------------------|--------------------------------------------------------|
-| `POST` | `/api/v1/documents/upload`           | Upload a document for analysis.                        |
-| `GET`  | `/api/v1/documents/{id}/stream`      | Stream analysis results for a document via SSE.        |
-| `GET`  | `/api/v1/documents`                  | Get a list of all documents and their status.          |
+The frontend is available at `http://localhost:4200`, and the backend API is exposed on `http://localhost:8000`.
 
 ## Next Steps
 
-*   **Local Mode**: Implement agent classes that leverage local models (like `docTR` for OCR and Ollama for insights) for a fully offline mode.
-*   **WebSockets**: Upgrade from SSE to WebSockets for bi-directional communication, allowing for cancellation of analysis jobs.
-*   **Enhanced Monitoring**: Integrate Prometheus and Grafana for detailed application performance monitoring.
+Future development will focus on enhancing modularity and observability:
+
+*   **Local AI Agents**: Implement agents that use local models (e.g., `docTR`, `Ollama`) for offline capability.
+*   **WebSocket Communication**: Transition from SSE to WebSockets to enable features like task cancellation.
+*   **Application Monitoring**: Integrate tools like Prometheus and Grafana for performance monitoring.
