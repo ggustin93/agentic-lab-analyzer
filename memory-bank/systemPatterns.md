@@ -24,12 +24,35 @@
 - **Visual State Synchronization:** Progress bars, spinners, icons, and stage indicators all update synchronously based on the same data source
 - **Comprehensive Logging:** Detailed console logging at each progress update for debugging and monitoring
 
-## 4. DevOps
+## 4. Reference Range Handling System
+
+**Pattern:** Pure OCR-first system with complete separation between extracted data display and medical reference information.
+
+**Implementation:**
+- **OCR Layer (Chutes AI Agent):** Enhanced prompts with specific guidance for extracting reference ranges from documents
+- **Validation Layer (lab-marker-info.service.ts):** Conservative detection of extraction failures using `isReferenceRangeIncomplete()`
+- **Display Layer (data-table.component.ts):** `getDisplayReferenceRange()` shows ONLY OCR-extracted data - never fallback ranges
+- **Comparison Layer (data-table.component.ts):** `getComparisonReferenceRange()` ONLY uses OCR data for highlighting
+- **Tooltip Layer (data-table.component.ts):** Medical standard ranges available only in tooltips for reference
+- **Fallback Layer (lab-marker-info.service.ts):** Medical standard ranges never contaminate table display
+
+**Key Principles:** 
+- **Data Purity**: Extracted data table contains ONLY what was actually detected by OCR from documents
+- **Zero Contamination**: No fallback data mixed into displayed results under any circumstances  
+- **Separation of Concerns**: Medical references available separately in tooltips, never in main data display
+- **User Trust**: Users see exactly what the system detected, with no added or modified information
+
+**Visual Indicators:** 
+- No "STANDARD" badges in table (removed)
+- Empty reference range cells when OCR extraction failed (honest representation)
+- Medical standard ranges available in tooltips for context only
+
+## 5. DevOps
 
 - **Containerization:** The entire application stack (frontend, backend) is containerized using Docker and managed with Docker Compose. This ensures a consistent, reproducible development and deployment environment for any developer.
 - **CI/CD Pipeline:** A GitHub Actions workflow automates linting and testing for both frontend and backend on every push, enforcing code quality and preventing regressions.
 
-## 5. Database Schema Management
+## 6. Database Schema Management
 
 ### **Migration System Architecture**
 - **Version-controlled migrations** stored in `supabase/migrations/` with semantic naming
@@ -56,4 +79,7 @@ supabase/
 - **Supabase MCP** for automated, safe application via agent
 - **Manual SQL Editor** for direct database access
 - **Supabase CLI** for local development workflows
-- **Safety features**: IF EXISTS/NOT EXISTS, proper indexes, documentation 
+- **Safety features**: IF EXISTS/NOT EXISTS, proper indexes, documentation
+
+- **File Structure:** Individual task files in `tasks/` for detailed implementation tracking and documentation
+- **Tag System:** Context-aware task organization supporting feature branches, experiments, and collaborative development 
