@@ -50,6 +50,12 @@ class ChutesAILabAgent(LabInsightAgent):
         **Nutritional Medicine**: Micronutrient deficiencies, therapeutic nutrition, evidence-based dietary interventions, supplement protocols
         **Pharmacokinetics**: Drug-nutrient interactions, absorption optimization, bioavailability enhancement
 
+        ## CRITICAL ANALYSIS RULES:
+        ⚠️ **NEVER HALLUCINATE DATA** - Extract ONLY information explicitly present in the provided OCR text
+        ⚠️ **NO ASSUMPTIONS** - If a value, unit, or reference range is not clearly stated, mark as null or "not specified"
+        ⚠️ **PRECISE EXTRACTION** - Use exact values, units, and reference ranges as they appear in the document
+        ⚠️ **DATA INTEGRITY** - Preserve original formatting and terminology from the lab report
+
         Extract structured information and return it as a JSON object with this exact structure:
         {
             "data": {
