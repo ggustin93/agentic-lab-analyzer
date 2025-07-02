@@ -35,20 +35,23 @@ class MistralOCRService:
         """Check if Mistral OCR service is available."""
         return bool(self.api_key)
 
-    def extract_text(self, file_path: str, file_type: str) -> str:
+    def extract_text(self, file_url: str) -> str:
         """
-        Extracts text from a given file (image or PDF) using Mistral's OCR API.
+        Extracts text from a given file URL (image or PDF) using Mistral's OCR API.
         """
         if not self.is_available():
             raise Exception("Mistral OCR service not available. MISTRAL_API_KEY is not set.")
 
-        filename = os.path.basename(file_path)
+        filename = file_url.split('/')[-1].split('?')[0]
         logger.info(f"Starting OCR extraction for: {filename}")
 
         try:
-            with open(file_path, "rb") as f:
-                content = f.read()
-                base64_encoded_content = base64.b64encode(content).decode('utf-8')
+            # Download the file content from the URL
+            response = requests.get(file_url, timeout=30)
+            response.raise_for_status()
+            content = response.content
+            
+            base64_encoded_content = base64.b64encode(content).decode('utf-8')
 
             mime_type = magic.from_buffer(content, mime=True)
             logger.debug(f"Detected MIME type for {filename}: {mime_type}")

@@ -52,6 +52,17 @@ class ChutesAILabAgent(LabInsightAgent):
             "recommendations": ["rec1", "rec2"],
             "disclaimer": "This analysis is for educational purposes only. It is not a substitute for professional medical advice. Always consult a qualified healthcare provider."
         }
+
+        For recommendations, provide SPECIFIC and ACTIONABLE dietary advice based on the lab results:
+        - Include specific foods to eat or avoid
+        - Mention exact nutrients, vitamins, or minerals needed
+        - Suggest meal timing, portion sizes, or preparation methods when relevant
+        - Reference specific dietary patterns (Mediterranean, DASH, etc.) if appropriate
+        - Include hydration recommendations if relevant
+        - Be concrete: instead of "eat healthy foods", say "consume 2-3 servings of fatty fish per week (salmon, mackerel) for omega-3 fatty acids"
+        - For high cholesterol: specify "limit saturated fat to <7% of daily calories, increase soluble fiber to 10-25g daily through oats, beans, and apples"
+        - For diabetes/glucose issues: mention "choose low glycemic index foods like quinoa instead of white rice, aim for 25-30g fiber daily"
+        - For iron deficiency: "consume vitamin C-rich foods (citrus, bell peppers) with iron-rich meals to enhance absorption"
         """
 
         try:
