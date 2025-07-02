@@ -6,142 +6,103 @@ Provides cloud-based OCR using Mistral's OCR API
 import os
 import base64
 import logging
-from typing import Optional, Dict, Any
-from io import BytesIO
-from PIL import Image
-
-try:
-    from mistralai import Mistral
-    MISTRAL_AVAILABLE = True
-except ImportError:
-    MISTRAL_AVAILABLE = False
-    logging.warning("Mistral AI not available - install with: pip install mistralai")
+import magic
+import requests
+from typing import Dict, Any
 
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
 class MistralOCRService:
-    """Mistral OCR service for cloud-based text extraction"""
-    
+    """Mistral OCR service for cloud-based text extraction using direct HTTP requests."""
+
     def __init__(self):
-        self.api_key = settings.mistral_api_key
-        self.model = settings.mistral_ocr_model
-        self.client = None
-        
-        if MISTRAL_AVAILABLE and self.api_key:
-            self.client = Mistral(api_key=self.api_key)
-        
-        # Valid file extensions
-        self.valid_document_extensions = {".pdf"}
-        self.valid_image_extensions = {".jpg", ".jpeg", ".png"}
-    
+        """Initializes the Mistral OCR Service."""
+        self.api_key = settings.MISTRAL_API_KEY
+        self.model = "mistral-ocr-latest"
+        self.api_url = "https://api.mistral.ai/v1/ocr"
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+        if not self.api_key:
+            logger.warning("MISTRAL_API_KEY not set. Mistral OCR service will be disabled.")
+        else:
+            logger.info("Mistral OCR service initialized and available.")
+
     def is_available(self) -> bool:
-        """Check if Mistral OCR service is available"""
-        return MISTRAL_AVAILABLE and self.client is not None and self.api_key is not None
-    
-    async def extract_text_from_image(self, image_path: str) -> str:
-        """Extract text from an image using Mistral OCR"""
+        """Check if Mistral OCR service is available."""
+        return bool(self.api_key)
+
+    def extract_text(self, file_path: str, file_type: str) -> str:
+        """
+        Extracts text from a given file (image or PDF) using Mistral's OCR API.
+        """
+        if not self.is_available():
+            raise Exception("Mistral OCR service not available. MISTRAL_API_KEY is not set.")
+
+        filename = os.path.basename(file_path)
+        logger.info(f"Starting OCR extraction for: {filename}")
+
         try:
-            if not self.is_available():
-                raise Exception("Mistral OCR service not available")
-            
-            # Load and encode image
-            with Image.open(image_path) as img:
-                # Convert to PNG format for consistency
-                buffered = BytesIO()
-                img.save(buffered, format="PNG")
-                img_str = base64.b64encode(buffered.getvalue()).decode()
-                
-                # Create document source
-                document_source = {
-                    "type": "image_url",
-                    "image_url": f"data:image/png;base64,{img_str}"
-                }
-                
-                # Process OCR
-                ocr_response = self.client.ocr.process(
-                    model=self.model,
-                    document=document_source,
-                    include_image_base64=False  # We don't need images back
-                )
-                
-                # Extract text from all pages
-                extracted_text = "\n\n".join(
-                    page.markdown for page in ocr_response.pages
-                )
-                
-                return extracted_text.strip()
-                
-        except Exception as e:
-            logger.error(f"Mistral OCR extraction error: {e}")
-            raise Exception(f"Failed to extract text from image: {str(e)}")
-    
-    async def extract_text_from_pdf(self, pdf_path: str) -> str:
-        """Extract text from a PDF using Mistral OCR"""
-        try:
-            if not self.is_available():
-                raise Exception("Mistral OCR service not available")
-            
-            # Upload PDF to Mistral
-            with open(pdf_path, "rb") as f:
+            with open(file_path, "rb") as f:
                 content = f.read()
-            
-            filename = os.path.basename(pdf_path)
-            uploaded_file = self.client.files.upload(
-                file={"file_name": filename, "content": content},
-                purpose="ocr",
-            )
-            
-            # Get signed URL
-            signed_url = self.client.files.get_signed_url(file_id=uploaded_file.id)
-            
-            # Create document source
-            document_source = {
-                "type": "document_url",
-                "document_url": signed_url.url
-            }
-            
-            # Process OCR
-            ocr_response = self.client.ocr.process(
-                model=self.model,
-                document=document_source,
-                include_image_base64=False
-            )
-            
-            # Extract text from all pages
-            extracted_text = "\n\n".join(
-                f"--- Page {i+1} ---\n{page.markdown}"
-                for i, page in enumerate(ocr_response.pages)
-            )
-            
-            return extracted_text.strip()
-            
-        except Exception as e:
-            logger.error(f"Mistral PDF OCR error: {e}")
-            raise Exception(f"Failed to extract text from PDF: {str(e)}")
-    
-    async def extract_text(self, file_path: str, file_type: str) -> str:
-        """Extract text from file based on type"""
-        try:
-            file_extension = f".{file_type.lower()}"
-            
-            if file_extension == '.pdf':
-                return await self.extract_text_from_pdf(file_path)
-            elif file_extension in self.valid_image_extensions:
-                return await self.extract_text_from_image(file_path)
+                base64_encoded_content = base64.b64encode(content).decode('utf-8')
+
+            mime_type = magic.from_buffer(content, mime=True)
+            logger.debug(f"Detected MIME type for {filename}: {mime_type}")
+
+            data_url = f"data:{mime_type};base64,{base64_encoded_content}"
+
+            if "pdf" in mime_type:
+                document_data = {"type": "document_url", "document_url": data_url}
+            elif "image" in mime_type:
+                document_data = {"type": "image_url", "image_url": data_url}
             else:
-                raise Exception(f"Unsupported file type: {file_type}")
-                
+                raise Exception(f"Unsupported MIME type: {mime_type}")
+
+            payload = {
+                "model": self.model,
+                "document": document_data,
+                "include_image_base64": False
+            }
+
+            response = requests.post(self.api_url, headers=self.headers, json=payload, timeout=120)
+            response.raise_for_status()
+
+            ocr_result = response.json()
+            logger.debug(f"Mistral OCR API full response: {ocr_result}")  # Log the full response
+            
+            # The API returns a list of pages, each with a 'markdown' field.
+            # We concatenate the text from all pages, adding a separator.
+            pages_text = []
+            for page in ocr_result.get('pages', []):
+                page_index = page.get('index', 'N/A')
+                markdown_text = page.get('markdown', '')
+                pages_text.append(f"--- Page {page_index + 1} ---\n\n{markdown_text}\n\n")
+            
+            extracted_text = "".join(pages_text)
+
+            if not extracted_text:
+                 logger.warning(f"OCR for {filename} completed but no text was extracted.")
+                 return ""
+            
+            logger.info(f"Successfully extracted {len(extracted_text)} characters from {filename}.")
+            return extracted_text
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"HTTP request failed during OCR for {filename}: {e}", exc_info=True)
+            raise Exception(f"Failed to process {filename} due to a network error: {e}")
         except Exception as e:
-            logger.error(f"Mistral OCR text extraction error: {e}")
-            raise
-    
+            logger.error(f"An unexpected error occurred during OCR for {filename}: {e}", exc_info=True)
+            raise Exception(f"An unexpected error occurred while processing {filename}: {e}")
+
     def get_usage_info(self) -> Dict[str, Any]:
-        """Get usage information for monitoring"""
+        """Get usage information for monitoring."""
         return {
             "provider": "mistral",
             "model": self.model,
             "available": self.is_available(),
-            "supported_formats": list(self.valid_document_extensions | self.valid_image_extensions)
+            "supported_formats": [".pdf", ".jpg", ".jpeg", ".png"]
         }

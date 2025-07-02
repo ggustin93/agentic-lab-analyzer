@@ -1,12 +1,12 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Subject, takeUntil, switchMap } from 'rxjs';
+import { Subject, takeUntil, switchMap, map } from 'rxjs';
 import { DocumentAnalysisService } from '../../services/document-analysis.service';
 import { DisclaimerBannerComponent } from '../../components/disclaimer-banner/disclaimer-banner.component';
 import { DataTableComponent } from '../../components/data-table/data-table.component';
 import { AiInsightsComponent } from '../../components/ai-insights/ai-insights.component';
-import { HealthDocument, DocumentStatus } from '../../models/document.model';
+import { HealthDocument, DocumentStatus, DocumentViewModel } from '../../models/document.model';
 
 @Component({
   selector: 'app-analysis',
@@ -134,7 +134,7 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
   `
 })
 export class AnalysisComponent implements OnInit, OnDestroy {
-  document: HealthDocument | null | undefined = undefined;
+  document: DocumentViewModel | null | undefined = undefined;
   showRawData = false;
   DocumentStatus = DocumentStatus;
   private destroy$ = new Subject<void>();
@@ -149,11 +149,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.route.params
       .pipe(
         takeUntil(this.destroy$),
-        switchMap(params => this.documentService.getDocument(params['id']))
+        switchMap(params => this.documentService.getDocument(params['id'])),
+        map(doc => doc ? new DocumentViewModel(doc) : null)
       )
       .subscribe({
         next: (document) => {
-          this.document = document || null;
+          this.document = document;
         },
         error: (error) => {
           console.error('Error loading document:', error);

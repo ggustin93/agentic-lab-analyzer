@@ -8,7 +8,7 @@
     "demo": {
       "architect": {
         "build": {
-          "builder": "@angular/build:application",
+          "builder": "@angular-devkit/build-angular:browser",
           "configurations": {
             "development": {
               "extractLicenses": false,
@@ -28,7 +28,7 @@
           "options": {
             "assets": [],
             "index": "src/index.html",
-            "browser": "src/main.ts",
+            "main": "src/main.ts",
             "outputPath": "dist/demo",
             "polyfills": ["zone.js"],
             "scripts": [],
@@ -37,7 +37,7 @@
           }
         },
         "serve": {
-          "builder": "@angular/build:dev-server",
+          "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "development": {
               "buildTarget": "demo:build:development"

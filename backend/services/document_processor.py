@@ -6,18 +6,19 @@ from datetime import datetime
 from typing import Dict, List, Optional
 import logging
 
-from .ocr_service import OCRService
-from agents.health_analysis_agent import HealthAnalysisService
-from models.health_models import DocumentStatus, HealthDataExtraction, HealthInsights
+from models.health_models import HealthInsights
+from agents.base import OCRExtractorAgent, LabInsightAgent
+from .mistral_ocr_service import MistralOCRService
+from .chutes_ai_agent import ChutesAILabAgent
 
 logger = logging.getLogger(__name__)
 
 class DocumentProcessor:
-    """Main service for processing health documents with PydanticAI"""
+    """Main service for processing health documents."""
     
     def __init__(self):
-        self.ocr_service = OCRService()
-        self.health_analysis_service = HealthAnalysisService()
+        self.ocr_agent: OCRExtractorAgent = MistralOCRService()
+        self.insight_agent: LabInsightAgent = ChutesAILabAgent()
         self.storage_path = "data/documents"
         self.ensure_storage_directory()
     
@@ -35,7 +36,7 @@ class DocumentProcessor:
                 "id": document_id,
                 "filename": filename,
                 "uploaded_at": datetime.now().isoformat(),
-                "status": DocumentStatus.PROCESSING.value,
+                "status": "processing",
                 "file_path": file_path
             }
             
@@ -50,131 +51,54 @@ class DocumentProcessor:
         except Exception as e:
             logger.error(f"Document processing error: {e}")
             # Update status to error
-            document_data["status"] = DocumentStatus.ERROR.value
+            document_data["status"] = "error"
             document_data["error_message"] = str(e)
             await self._save_document_data(document_id, document_data)
             raise
     
     async def _process_document_async(self, document_id: str, file_path: str, filename: str):
         """Async processing of document with PydanticAI"""
+        document_data = await self._load_document_data(document_id)
+        if not document_data:
+            logger.error(f"Could not load document data for {document_id}")
+            return
+            
         try:
             logger.info(f"Starting PydanticAI processing for document {document_id}")
             
-            # Extract file type
-            file_extension = filename.split('.')[-1].lower()
-            
-            # Step 1: OCR - Extract text
-            logger.info(f"Extracting text from {filename}")
-            raw_text = await self.ocr_service.extract_text(file_path, file_extension)
-            
+            file_type = filename.split('.')[-1].lower()
+            raw_text = self.ocr_agent.extract_text(file_path, file_type)
             if not raw_text.strip():
-                raise Exception("No text could be extracted from the document")
+                raise ValueError("OCR process yielded no text.")
             
-            # Step 2: PydanticAI - Extract structured health data
-            logger.info(f"Extracting structured health data for document {document_id}")
-            health_data: HealthDataExtraction = await self.health_analysis_service.extract_health_data(
-                raw_text=raw_text,
-                filename=filename,
-                document_type=self._infer_document_type(filename, raw_text)
-            )
+            insights_result = await self.insight_agent.analyze_text(raw_text)
             
-            # Step 3: PydanticAI - Generate insights
-            logger.info(f"Generating health insights for document {document_id}")
-            insights: HealthInsights = await self.health_analysis_service.generate_insights(
-                health_data=health_data,
-                raw_text=raw_text,
-                filename=filename
-            )
-            
-            # Step 4: Convert to legacy format for frontend compatibility
-            extracted_data = [
-                {
-                    "marker": marker.marker,
-                    "value": marker.value,
-                    "unit": marker.unit,
-                    "referenceRange": marker.reference_range
-                }
-                for marker in health_data.markers
-            ]
-            
-            # Format insights as markdown
-            ai_insights = self._format_insights_as_markdown(insights)
-            
-            # Step 5: Save results
-            document_data = {
-                "id": document_id,
-                "filename": filename,
-                "uploaded_at": datetime.now().isoformat(),
-                "status": DocumentStatus.COMPLETE.value,
-                "file_path": file_path,
+            # Format for storage and response
+            document_data.update({
+                "status": "complete",
                 "raw_text": raw_text,
-                "extracted_data": extracted_data,
-                "ai_insights": ai_insights,
-                "processed_at": datetime.now().isoformat(),
-                # Store structured data for future use
-                "structured_health_data": health_data.model_dump(),
-                "structured_insights": insights.model_dump()
-            }
+                "extracted_data": [marker.model_dump() for marker in insights_result.data.markers],
+                "ai_insights": self._format_insights_as_markdown(insights_result),
+                "processed_at": datetime.now().isoformat()
+            })
             
             await self._save_document_data(document_id, document_data)
             logger.info(f"Successfully processed document {document_id} with PydanticAI")
             
         except Exception as e:
-            logger.error(f"Async processing error for document {document_id}: {e}")
-            
-            # Update status to error
-            document_data = await self._load_document_data(document_id)
-            if document_data:
-                document_data["status"] = DocumentStatus.ERROR.value
-                document_data["error_message"] = str(e)
-                await self._save_document_data(document_id, document_data)
-    
-    def _infer_document_type(self, filename: str, raw_text: str) -> str:
-        """Infer document type from filename and content"""
-        filename_lower = filename.lower()
-        text_lower = raw_text.lower()
-        
-        if any(term in filename_lower or term in text_lower for term in ['blood', 'cbc', 'hemoglobin']):
-            return "Blood Test"
-        elif any(term in filename_lower or term in text_lower for term in ['lipid', 'cholesterol', 'triglyceride']):
-            return "Lipid Panel"
-        elif any(term in filename_lower or term in text_lower for term in ['glucose', 'diabetes', 'hba1c']):
-            return "Diabetes Panel"
-        elif any(term in filename_lower or term in text_lower for term in ['thyroid', 'tsh', 't3', 't4']):
-            return "Thyroid Function"
-        else:
-            return "General Health Report"
-    
+            logger.error(f"Async processing error for document {document_id}: {e}", exc_info=True)
+            document_data["status"] = "error"
+            document_data["error_message"] = str(e)
+            await self._save_document_data(document_id, document_data)
+
     def _format_insights_as_markdown(self, insights: HealthInsights) -> str:
-        """Format structured insights as markdown for frontend display"""
-        markdown = f"""# Health Analysis Report
+        # Helper function to convert the structured insights object to a single markdown string for the frontend
+        md = f"# Analysis Report\n\n## Summary\n{insights.summary}\n\n"
+        md += "## Key Findings\n" + "".join([f"- {finding}\n" for finding in insights.key_findings])
+        md += "\n## Recommendations\n" + "".join([f"- {rec}\n" for rec in insights.recommendations])
+        md += f"\n---\n\n**Disclaimer:** {insights.disclaimer}"
+        return md
 
-## Summary
-{insights.summary}
-
-## Key Findings
-"""
-        for finding in insights.key_findings:
-            markdown += f"- {finding}\n"
-        
-        if insights.risk_factors:
-            markdown += "\n## Risk Factors\n"
-            for risk in insights.risk_factors:
-                markdown += f"- ⚠️ {risk}\n"
-        
-        markdown += "\n## Recommendations\n"
-        for rec in insights.recommendations:
-            markdown += f"- {rec}\n"
-        
-        if insights.follow_up_needed:
-            markdown += "\n## Follow-up Recommended\n"
-            markdown += "Based on the analysis, follow-up with your healthcare provider is recommended.\n"
-        
-        markdown += f"\n## Important Disclaimer\n"
-        markdown += f"⚠️ **{insights.disclaimer}**\n"
-        
-        return markdown
-    
     async def get_analysis(self, document_id: str) -> Optional[Dict]:
         """Get analysis results for a document"""
         try:

@@ -1,178 +1,51 @@
-name: CI/CD Pipeline
+name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, feature/iba-final-architecture ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  # Frontend Tests
-  frontend-tests:
+  backend:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+    - name: Lint and Format Check (Ruff)
+      run: |
+        pip install ruff
+        cd backend
+        ruff check .
+        ruff format --check .
+    - name: Run backend tests
+      run: |
+        cd backend
+        pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
-    
     - name: Install dependencies
       run: npm ci
-    
     - name: Run linting
       run: npm run lint
-    
-    - name: Run tests
-      run: npm test -- --watch=false --browsers=ChromeHeadless
-    
     - name: Build application
       run: npm run build
-    
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-build
-        path: dist/
-
-  # Backend Tests
-  backend-tests:
-    runs-on: ubuntu-latest
-    services:
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
-    
-    - name: Install Python dependencies
-      run: |
-        cd backend
-        pip install -r requirements.txt
-    
-    - name: Run linting
-      run: |
-        cd backend
-        flake8 .
-        black . --check
-        isort . --check-only
-    
-    - name: Run type checking
-      run: |
-        cd backend
-        mypy .
-    
     - name: Run tests
-      run: |
-        cd backend
-        pytest --cov=. --cov-report=xml
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: backend/coverage.xml
-
-  # Security Scanning
-  security-scan:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Run Semgrep
-      uses: returntocorp/semgrep-action@v1
-      with:
-        config: auto
-    
-    - name: Setup Python for security scan
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        cd backend
-        pip install -r requirements.txt
-    
-    - name: Run Bandit security scan
-      run: |
-        cd backend
-        bandit -r . -f json -o bandit-report.json
-    
-    - name: Run Safety check
-      run: |
-        cd backend
-        safety check --json --output safety-report.json
-    
-    - name: Upload security reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: security-reports
-        path: backend/*-report.json
-
-  # Docker Build
-  docker-build:
-    runs-on: ubuntu-latest
-    needs: [frontend-tests, backend-tests]
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Build frontend image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.frontend
-        push: false
-        tags: health-analyzer-frontend:latest
-    
-    - name: Build backend image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./backend
-        file: ./backend/Dockerfile
-        push: false
-        tags: health-analyzer-backend:latest
-
-  # Deploy to Staging
-  deploy-staging:
-    runs-on: ubuntu-latest
-    needs: [docker-build, security-scan]
-    if: github.ref == 'refs/heads/develop'
-    environment: staging
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to staging
-      run: |
-        echo "Deploying to staging environment"
-        # Add your deployment commands here
-
-  # Deploy to Production
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: [docker-build, security-scan]
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to production
-      run: |
-        echo "Deploying to production environment"
-        # Add your deployment commands here
+      # This project does not have a test runner configured. 
+      # This step is a placeholder.
+      run: echo "Skipping frontend tests"

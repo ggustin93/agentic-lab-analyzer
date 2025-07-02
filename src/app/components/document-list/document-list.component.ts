@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HealthDocument, DocumentStatus } from '../../models/document.model';
@@ -23,7 +23,7 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
       </div>
       
       <div *ngIf="documents.length > 0" class="divide-y divide-gray-200">
-        <div *ngFor="let document of documents" 
+        <div *ngFor="let document of documents; trackBy: trackByDocumentId" 
              class="px-6 py-4 hover:bg-gray-50 transition-colors duration-150">
           
           <div class="flex items-center justify-between">
@@ -38,10 +38,10 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
                 
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 truncate">
-                    {{ document.title }}
+                    {{ document.filename }}
                   </p>
                   <p class="text-sm text-gray-500">
-                    {{ getRelativeTime(document.uploadedAt) }}
+                    {{ getRelativeTime(document.uploaded_at) }}
                   </p>
                 </div>
               </div>
@@ -87,13 +87,18 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
         </div>
       </div>
     </div>
-  `
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DocumentListComponent {
   @Input() documents: HealthDocument[] = [];
   @Output() deleteDocument = new EventEmitter<string>();
   
-  DocumentStatus = DocumentStatus;
+  readonly DocumentStatus = DocumentStatus;
+
+  trackByDocumentId(index: number, document: HealthDocument): string {
+    return document.id;
+  }
 
   getStatusClass(status: DocumentStatus): string {
     switch (status) {
@@ -108,7 +113,8 @@ export class DocumentListComponent {
     }
   }
 
-  getRelativeTime(date: Date): string {
+  getRelativeTime(dateString: string): string {
+    const date = new Date(dateString);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
     

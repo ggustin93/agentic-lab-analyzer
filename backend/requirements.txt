@@ -4,57 +4,29 @@ uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
 # Data Validation & Models
-pydantic==2.5.0
-pydantic-ai==0.2.19
+pydantic==2.8.2
 pydantic-settings==2.1.0
 
 # HTTP Client & Async
-httpx==0.25.2
+httpx==0.27.2
 aiofiles==23.2.0
 
 # Environment & Configuration
 python-dotenv==1.0.0
 
-# Image Processing & OCR
+# Image Processing (minimal)
 Pillow==10.1.0
-pytesseract==0.3.10
-PyPDF2==3.0.1
 
-# AI Services
+# AI Services (MVP focused)
 openai==1.3.0
-anthropic==0.7.0
-mistralai==1.0.0  # For Mistral OCR
 
-# Security & Authentication
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-
-# Monitoring & Observability
-logfire==0.51.0
-
-# Database (if needed)
-sqlalchemy==2.0.23
-alembic==1.12.1
-
-# Testing
+# Development Tools (minimal)
 pytest==7.4.3
 pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-httpx==0.25.2  # For testing
 
-# Development Tools
-black==23.11.0
-isort==5.12.0
-flake8==6.1.0
-mypy==1.7.0
+# Communication
+requests==2.31.0
 
-# Production
-gunicorn==21.2.0
-redis==5.0.1  # For caching
-
-# Security Scanning
-bandit==1.7.5
-safety==2.3.5
-
-# Load Testing
-locust==2.17.0
+# Utilities
+watchfiles==0.21.0
+python-magic==0.4.27
