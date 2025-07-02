@@ -67,11 +67,6 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
               <td>
                 <div class="flex items-center space-x-2">
                   <span>{{ getDisplayReferenceRange(item) }}</span>
-                  <span *ngIf="isUsingFallbackRange(item)" 
-                        class="status-badge standard"
-                        title="Using medical standard range (OCR extraction failed for this marker)">
-                    STANDARD
-                  </span>
                 </div>
               </td>
             </tr>
@@ -141,42 +136,25 @@ export class DataTableComponent {
   }
 
   getDisplayReferenceRange(item: HealthMarker): string {
-    // FIXED: Prioritize OCR ranges for display, only use fallback if truly not recognized
+    // ONLY show what was actually extracted by OCR - NEVER fallback ranges in the table
     const ocrRange = item.reference_range || '';
     
-    // If we have a valid OCR range, always use it for display
-    if (ocrRange && !this.labMarkerService.isReferenceRangeIncomplete(ocrRange)) {
-      return ocrRange;
-    }
-    
-    // Only if OCR truly failed, then show fallback range
-    const fallback = this.labMarkerService.getFallbackReferenceRange(item.marker || '');
-    if (fallback) {
-      return fallback;
-    }
-    
-    // Last resort: show whatever OCR gave us or N/A
-    return ocrRange || 'N/A';
-  }
-
-  isUsingFallbackRange(item: HealthMarker): boolean {
-    const ocrRange = item.reference_range || '';
-    return this.labMarkerService.isReferenceRangeIncomplete(ocrRange) &&
-           !!this.labMarkerService.getFallbackReferenceRange(item.marker || '');
+    // Return exactly what OCR extracted, or empty if nothing was extracted
+    return ocrRange || '';
   }
 
   // NEW: Get the range to use for value comparison (OCR only!)
   private getComparisonReferenceRange(item: HealthMarker): string | null {
-    // FIXED: Only use OCR ranges for out-of-range comparison
-    // Never use fallback ranges for highlighting - only what OCR actually extracted
+    // ONLY use OCR ranges for out-of-range comparison
+    // Use whatever OCR extracted, even if it seems incomplete
     const ocrRange = item.reference_range || '';
     
-    // If OCR range is missing or clearly invalid, don't highlight anything
-    if (!ocrRange || this.labMarkerService.isReferenceRangeIncomplete(ocrRange)) {
+    // Only skip completely empty ranges
+    if (!ocrRange || ocrRange.trim() === '') {
       return null;
     }
     
-    return ocrRange;
+    return ocrRange.trim();
   }
 
   getValueColor(item: HealthMarker): string {
