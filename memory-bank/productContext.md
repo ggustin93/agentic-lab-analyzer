@@ -11,6 +11,8 @@ The "customer" for this product is the technical review team at IBA Dosimetry, i
 ## 3. User Experience Goals
 
 - **Seamless & Simple:** The user journey, from uploading a document to viewing the analysis, should be intuitive and frictionless.
-- **Responsive & Real-time:** The UI must feel alive and responsive, providing immediate feedback during processes like file analysis.
+- **Responsive & Real-time:** The UI must feel alive and responsive, providing immediate feedback during processes like file analysis. **Enhanced with stage-specific progress indicators that show users exactly where they are in the 4-stage processing pipeline (OCR → AI Analysis → Saving → Complete).**
+- **Visually Engaging:** **NEW: Color-coded progress system with distinct visual themes for each processing stage - yellow for OCR extraction, blue for AI analysis, purple for saving results, and green for completion. Includes animated spinners, progress dots, and dynamic progress bars.**
+- **Transparent Processing:** **NEW: Users can see detailed progress percentages (10%, 50%, 90%, 100%) and understand what's happening at each stage, reducing anxiety during longer processing times.**
 - **Informative & Clear:** The presentation of complex health data should be simplified and easy to understand for a non-expert user, supported by clear tables and AI-generated summaries.
-- **Polished & Professional:** The application's look and feel should reflect the high standards of a company in the medical technology field. 
+- **Polished & Professional:** The application's look and feel should reflect the high standards of a company in the medical technology field, **enhanced with smooth animations and professional color schemes that guide users through the experience.** 
