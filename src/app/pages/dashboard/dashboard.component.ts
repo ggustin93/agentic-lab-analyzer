@@ -1,10 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable } from 'rxjs';
+import { Observable, map, Subscription } from 'rxjs';
 import { DocumentAnalysisService } from '../../services/document-analysis.service';
 import { UploadZoneComponent } from '../../components/upload-zone/upload-zone.component';
 import { DocumentListComponent } from '../../components/document-list/document-list.component';
-import { HealthDocument } from '../../models/document.model';
+import { HealthDocument, DocumentStatus } from '../../models/document.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -125,19 +125,10 @@ import { HealthDocument } from '../../models/document.model';
             
             <app-upload-zone 
               (fileSelected)="onFileSelected($event)"
-              [class.opacity-50]="isUploading"
-              [class.pointer-events-none]="isUploading">
+              [isUploading]="shouldShowProgress(processingDocument$ | async)"
+              [progress]="getUploadProgress(processingDocument$ | async)"
+              [processingStage]="getProcessingStage(processingDocument$ | async)">
             </app-upload-zone>
-            
-            <div *ngIf="isUploading" class="mt-4 text-center">
-              <div class="inline-flex items-center space-x-2 text-primary-600">
-                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span class="text-sm font-medium">Uploading and processing...</span>
-              </div>
-            </div>
           </div>
 
           <!-- Document List -->
@@ -152,25 +143,67 @@ import { HealthDocument } from '../../models/document.model';
     </div>
   `
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit, OnDestroy {
   public readonly documents$: Observable<HealthDocument[]> = this.documentService.documents$;
-  isUploading = false;
+  
+  // Real-time reactive observables for upload progress
+  public readonly processingDocument$: Observable<HealthDocument | null> = this.documents$.pipe(
+    map(documents => {
+      // Find the most recently uploaded document that's still processing
+      const processingDocs = documents.filter(doc => doc.status === DocumentStatus.PROCESSING);
+      return processingDocs.length > 0 ? processingDocs[0] : null;
+    })
+  );
+  
+  // Track if any document is currently being processed (for UI state)
+  public readonly isProcessing$: Observable<boolean> = this.processingDocument$.pipe(
+    map(doc => doc !== null)
+  );
+
+  private subscription: Subscription = new Subscription();
 
   constructor(private documentService: DocumentAnalysisService) {}
 
+  ngOnInit(): void {
+    // Enhanced real-time logging for debugging progress and stage updates
+    this.subscription.add(
+      this.processingDocument$.subscribe(doc => {
+        if (doc) {
+          console.log(`📊 DASHBOARD - Real-time update for ${doc.filename}:`);
+          console.log(`   📈 Progress: ${doc.progress || 0}%`);
+          console.log(`   🔄 Stage: "${doc.processing_stage || 'unknown'}"`);
+          console.log(`   ⚡ Status: ${doc.status}`);
+          console.log(`   🆔 Document ID: ${doc.id}`);
+        } else {
+          console.log(`📊 DASHBOARD - No processing document found`);
+        }
+      })
+    );
+    
+    // Also log all documents for debugging
+    this.subscription.add(
+      this.documents$.subscribe(docs => {
+        const processingCount = docs.filter(d => d.status === DocumentStatus.PROCESSING).length;
+        console.log(`📋 DASHBOARD - Documents updated: ${docs.length} total, ${processingCount} processing`);
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+
   onFileSelected(file: File): void {
-    this.isUploading = true;
+    console.log('🚀 Starting upload for:', file.name);
     
     this.documentService.uploadDocument(file)
       .subscribe({
         next: (response) => {
-          console.log('Document upload initiated:', response);
-          // The UI will update reactively via the stream
-          this.isUploading = false;
+          console.log('✅ Upload initiated successfully:', response);
+          // No local state management - let the reactive stream handle everything
         },
         error: (error) => {
-          console.error('Upload failed:', error);
-          this.isUploading = false;
+          console.error('❌ Upload failed:', error);
           alert('Upload failed. Please try again.');
         }
       });
@@ -180,12 +213,27 @@ export class DashboardComponent {
     this.documentService.deleteDocument(documentId)
       .subscribe({
         next: (response) => {
-          console.log('Document deleted successfully:', response);
+          console.log('🗑️ Document deleted successfully:', response);
         },
         error: (error) => {
-          console.error('Delete failed:', error);
+          console.error('❌ Delete failed:', error);
           alert('Failed to delete document. Please try again.');
         }
       });
+  }
+
+  // Helper method to get upload progress for the current upload
+  getUploadProgress(processingDocument: HealthDocument | null): number | undefined {
+    return processingDocument?.progress ?? undefined;
+  }
+
+  // Helper method to get processing stage for the current upload
+  getProcessingStage(processingDocument: HealthDocument | null): string | undefined {
+    return processingDocument?.processing_stage ?? undefined;
+  }
+
+  // Check if we should show upload progress
+  shouldShowProgress(processingDocument: HealthDocument | null): boolean {
+    return processingDocument !== null && processingDocument.status === DocumentStatus.PROCESSING;
   }
 }

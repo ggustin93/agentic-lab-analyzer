@@ -168,6 +168,8 @@ class DocumentProcessor:
                 "raw_text": document_data.get("raw_text"),
                 "error_message": document_data.get("error_message"),
                 "processed_at": processed_at,
+                "progress": document_data.get("progress"),  # Include progress for SSE updates
+                "processing_stage": document_data.get("processing_stage"),  # Include processing stage for SSE updates
                 "ai_insights": None,
                 "extracted_data": []
             }

@@ -48,8 +48,14 @@ export class DocumentAnalysisService {
 
     eventSource.onmessage = (event) => {
       const result: AnalysisResultResponse = JSON.parse(event.data);
+      console.log(`📡 SSE Update received for ${result.document_id}:`, {
+        progress: result.progress,
+        stage: result.processing_stage,
+        status: result.status
+      });
       this.updateDocumentInState(result);
       if (result.status === DocumentStatus.COMPLETE || result.status === DocumentStatus.ERROR) {
+        console.log(`✅ SSE Stream closed for ${result.document_id} - Final status: ${result.status}`);
         eventSource.close();
       }
     };
@@ -85,7 +91,10 @@ export class DocumentAnalysisService {
       };
       const newDocs = [...currentDocs];
       newDocs[index] = updatedDoc;
+      console.log(`🔄 State updated for ${result.document_id}: ${result.progress}% (${result.processing_stage})`);
       this.documentsSubject.next(newDocs);
+    } else {
+      console.warn(`⚠️ Document ${result.document_id} not found in current state for update`);
     }
   }
 

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HealthDocument, DocumentStatus } from '../../models/document.model';
@@ -48,29 +48,55 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
             </div>
             
             <div class="flex items-center space-x-3">
-              <span [ngClass]="getStatusClass(document.status)">
-                <span *ngIf="document.status === DocumentStatus.PROCESSING" class="flex items-center">
-                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <!-- Processing Status with Enhanced Stage-Specific Display -->
+              <div *ngIf="document.status === DocumentStatus.PROCESSING" class="flex flex-col items-end min-w-0">
+                <!-- Stage badge with color coding -->
+                <div class="flex items-center mb-2 px-2 py-1 rounded-full border" [class]="getProcessingStageColor(document)">
+                  <!-- Stage-specific spinner icon -->
+                  <svg *ngIf="document.processing_stage !== 'complete'" 
+                       class="animate-spin -ml-1 mr-2 h-3 w-3" 
+                       [class]="getProcessingStageColor(document).split(' ')[0]" 
+                       fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  <span>
-                    {{ getProcessingStageText(document) }}
-                    <span class="text-xs ml-1">{{ document.progress || 0 }}%</span>
-                  </span>
-                </span>
-                <span *ngIf="document.status === DocumentStatus.COMPLETE" class="flex items-center">
-                  <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <!-- Checkmark for complete -->
+                  <svg *ngIf="document.processing_stage === 'complete'" 
+                       class="mr-2 h-3 w-3 text-green-600" 
+                       fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                   </svg>
-                  Complete
+                  <span class="text-xs font-medium">
+                    {{ getProcessingStageText(document) }}
+                  </span>
+                </div>
+                <!-- Enhanced Progress Bar with Stage Colors -->
+                <div class="w-28 bg-gray-200 rounded-full h-2 mb-1 shadow-inner">
+                  <div class="h-2 rounded-full transition-all duration-500 ease-out" 
+                       [class]="getProgressBarColor(document)"
+                       [style.width.%]="document.progress || 0"></div>
+                </div>
+                <span class="text-xs font-semibold" [class]="getProcessingStageColor(document).split(' ')[0]">
+                  {{ document.progress || 0 }}% • Stage {{ getCurrentStageNumber(document) }}/4
                 </span>
-                <span *ngIf="document.status === DocumentStatus.ERROR" class="flex items-center">
-                  <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                  </svg>
-                  Error
-                </span>
+              </div>
+
+              <!-- Complete Status -->
+              <span *ngIf="document.status === DocumentStatus.COMPLETE" 
+                    class="flex items-center text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
+                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+                Complete
+              </span>
+
+              <!-- Error Status -->
+              <span *ngIf="document.status === DocumentStatus.ERROR" 
+                    class="flex items-center text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
+                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                Error
               </span>
               
               <button *ngIf="document.status === DocumentStatus.COMPLETE"
@@ -94,29 +120,24 @@ import { HealthDocument, DocumentStatus } from '../../models/document.model';
       </div>
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  // Removed OnPush to ensure progress updates are detected in real-time
 })
-export class DocumentListComponent {
+export class DocumentListComponent implements OnChanges {
   @Input() documents: HealthDocument[] = [];
   @Output() deleteDocument = new EventEmitter<string>();
   
   readonly DocumentStatus = DocumentStatus;
 
-  trackByDocumentId(index: number, document: HealthDocument): string {
-    return document.id;
+  ngOnChanges(): void {
+    // Log progress updates for debugging real-time functionality
+    const processingDocs = this.documents.filter(doc => doc.status === DocumentStatus.PROCESSING);
+    processingDocs.forEach(doc => {
+      console.log(`🔄 Document List Update - ${doc.filename}: ${doc.progress}% (${doc.processing_stage})`);
+    });
   }
 
-  getStatusClass(status: DocumentStatus): string {
-    switch (status) {
-      case DocumentStatus.PROCESSING:
-        return 'status-processing';
-      case DocumentStatus.COMPLETE:
-        return 'status-complete';
-      case DocumentStatus.ERROR:
-        return 'status-error';
-      default:
-        return '';
-    }
+  trackByDocumentId(index: number, document: HealthDocument): string {
+    return document.id;
   }
 
   getRelativeTime(dateString: string): string {
@@ -156,17 +177,66 @@ export class DocumentListComponent {
   }
   
   getProcessingStageText(document: HealthDocument): string {
-    if (!document.processing_stage) return 'Processing...';
+    console.log(`📋 DOCUMENT LIST - Getting stage text for ${document.id}: Stage="${document.processing_stage}", Progress=${document.progress}%`);
+    
+    if (!document.processing_stage) return 'Starting processing...';
     
     switch (document.processing_stage) {
       case 'ocr_extraction':
         return 'Extracting text...';
       case 'ai_analysis':
-        return 'Analyzing data...';
+        return 'AI analyzing data...';
       case 'saving_results':
-        return 'Finalizing...';
+        return 'Finalizing results...';
+      case 'complete':
+        return 'Complete!';
       default:
         return 'Processing...';
+    }
+  }
+
+  getProcessingStageColor(document: HealthDocument): string {
+    switch (document.processing_stage) {
+      case 'ocr_extraction':
+        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'ai_analysis':
+        return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'saving_results':
+        return 'text-purple-600 bg-purple-50 border-purple-200';
+      case 'complete':
+        return 'text-green-600 bg-green-50 border-green-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
+    }
+  }
+
+  getProgressBarColor(document: HealthDocument): string {
+    switch (document.processing_stage) {
+      case 'ocr_extraction':
+        return 'bg-yellow-500';
+      case 'ai_analysis':
+        return 'bg-blue-500';
+      case 'saving_results':
+        return 'bg-purple-500';
+      case 'complete':
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-500';
+    }
+  }
+
+  getCurrentStageNumber(document: HealthDocument): number {
+    switch (document.processing_stage) {
+      case 'ocr_extraction':
+        return 1;
+      case 'ai_analysis':
+        return 2;
+      case 'saving_results':
+        return 3;
+      case 'complete':
+        return 4;
+      default:
+        return 0;
     }
   }
 }
