@@ -59,7 +59,7 @@ class ChutesAILabAgent(LabInsightAgent):
         Extract structured information and return it as a JSON object with this exact structure:
         {
             "data": {
-                "markers": [{"marker": "name", "value": "value", "unit": "unit", "reference_range": "range"}],
+                "markers": [{"marker": "name", "value": "value_as_string", "unit": "unit", "reference_range": "range"}],
                 "document_type": "type",
                 "test_date": null
             },
@@ -68,6 +68,8 @@ class ChutesAILabAgent(LabInsightAgent):
             "recommendations": ["rec1", "rec2"],
             "disclaimer": "This analysis is for educational purposes only. It is not a substitute for professional medical advice. Always consult a qualified healthcare provider."
         }
+
+        ⚠️ **CRITICAL**: ALL "value" fields MUST be strings, even for numeric values. Examples: "88" not 88, "12.5" not 12.5, "Normal" not Normal
 
         For recommendations, provide SPECIFIC and ACTIONABLE dietary advice based on the lab results:
         - Include specific foods to eat or avoid
@@ -99,8 +101,14 @@ class ChutesAILabAgent(LabInsightAgent):
             content = result["choices"][0]["message"]["content"]
             parsed_data = json.loads(content)
             
-            # Convert to our Pydantic models
-            markers = [HealthMarker(**marker) for marker in parsed_data["data"]["markers"]]
+            # Convert to our Pydantic models with proper type conversion
+            markers = []
+            for marker_data in parsed_data["data"]["markers"]:
+                # Ensure value is always a string (AI sometimes returns numbers)
+                marker_data_copy = marker_data.copy()
+                if "value" in marker_data_copy and marker_data_copy["value"] is not None:
+                    marker_data_copy["value"] = str(marker_data_copy["value"])
+                markers.append(HealthMarker(**marker_data_copy))
             
             parsed_test_date = parse_date(parsed_data["data"].get("test_date"))
 

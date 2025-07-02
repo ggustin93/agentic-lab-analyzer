@@ -84,6 +84,7 @@ class DocumentProcessor:
             logger.info(f"Starting PydanticAI processing for document {document_id}")
             
             # Update status with progress information - OCR starting
+            logger.info(f"📄 Stage 1/4: Starting OCR extraction for {document_id}")
             self._save_document_data(document_id, {
                 "status": "processing",
                 "processing_stage": "ocr_extraction",
@@ -97,6 +98,7 @@ class DocumentProcessor:
                 raise ValueError("OCR process yielded no text")
             
             # Update status with progress information - OCR complete, starting analysis
+            logger.info(f"🧠 Stage 2/4: Starting AI analysis for {document_id} (extracted {len(raw_text)} characters)")
             self._save_document_data(document_id, {
                 "status": "processing",
                 "processing_stage": "ai_analysis",
@@ -108,11 +110,16 @@ class DocumentProcessor:
             insights_result = await self.insight_agent.analyze_text(raw_text)
 
             # Update status with progress information - analysis complete, saving results
+            logger.info(f"💾 Stage 3/4: Saving analysis results for {document_id}")
             self._save_document_data(document_id, {
                 "status": "processing",
                 "processing_stage": "saving_results",
                 "progress": 90
             })
+
+            # Give users time to see the saving stage (and actually perform the save operations)
+            import asyncio
+            await asyncio.sleep(0.5)  # Half-second delay to show the saving stage
 
             # Final data structure for saving
             final_data = {
@@ -125,7 +132,7 @@ class DocumentProcessor:
                 "processing_stage": "complete"
             }
             self._save_document_data(document_id, final_data)
-            logger.info(f"Successfully processed and saved document {document_id}")
+            logger.info(f"✅ Stage 4/4: Document {document_id} processing complete!")
 
         except Exception as e:
             logger.error(f"Async processing error for document {document_id}: {e}", exc_info=True)
@@ -278,11 +285,16 @@ class DocumentProcessor:
             # 1. Always update the main document table
             doc_payload = {
                 "status": data["status"],
-                "error_message": data.get("error_message")
+                "error_message": data.get("error_message"),
+                "progress": data.get("progress"),
+                "processing_stage": data.get("processing_stage")
             }
 
-            if data["status"] == "complete":
+            # Include raw_text if provided (during OCR stage)
+            if "raw_text" in data:
                 doc_payload["raw_text"] = data.get("raw_text")
+
+            if data["status"] == "complete":
                 doc_payload["processed_at"] = datetime.now().isoformat()
 
             logger.info(f"UPDATING 'documents' with payload: {doc_payload}")
