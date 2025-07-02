@@ -28,6 +28,8 @@ export class DocumentAnalysisService {
 
     return this.http.post<UploadResponse>(`${this.API_BASE_URL}/documents/upload`, formData).pipe(
       tap(response => {
+        // Use the current time in ISO format for the upload date
+        // The backend will update this with the correct value via SSE
         const newDoc: HealthDocument = {
           id: response.document_id,
           filename: response.filename,
@@ -78,6 +80,8 @@ export class DocumentAnalysisService {
         })),
         ai_insights: result.ai_insights,
         error_message: result.error_message,
+        progress: result.progress,
+        processing_stage: result.processing_stage,
       };
       const newDocs = [...currentDocs];
       newDocs[index] = updatedDoc;
@@ -102,34 +106,67 @@ export class DocumentAnalysisService {
   }
 
   getDocument(documentId: string): Observable<HealthDocument | null> {
-    // First check if we already have the document in our state
-    const existingDoc = this.documentsSubject.value.find(doc => doc.id === documentId);
-    if (existingDoc) {
-      return of(existingDoc);
-    }
+    console.log(`Getting document ${documentId}`);
     
-    // If not, try to fetch it from the API
+    // Always fetch from API for analysis view to ensure fresh data
+    // This prevents stale data when navigating between different analyses
+    console.log(`Fetching document ${documentId} from API`);
     return this.http.get<AnalysisResultResponse>(`${this.API_BASE_URL}/documents/${documentId}`).pipe(
-      map(result => ({
-        id: result.document_id,
-        filename: result.filename,
-        uploaded_at: result.uploaded_at,
-        status: result.status,
-        processed_at: result.processed_at,
-        raw_text: result.raw_text,
-        extracted_data: result.extracted_data?.map(d => ({
-          marker: d.marker,
-          value: d.value,
-          unit: d.unit,
-          reference_range: d.reference_range
-        })),
-        ai_insights: result.ai_insights,
-        error_message: result.error_message,
-      })),
+      tap(result => console.log(`API response for document ${documentId}:`, result)),
+      map(result => {
+        const document: HealthDocument = {
+          id: result.document_id,
+          filename: result.filename,
+          uploaded_at: result.uploaded_at,
+          status: result.status,
+          processed_at: result.processed_at,
+          raw_text: result.raw_text,
+          extracted_data: result.extracted_data?.map(d => ({
+            marker: d.marker,
+            value: d.value,
+            unit: d.unit,
+            reference_range: d.reference_range
+          })),
+          ai_insights: result.ai_insights,
+          error_message: result.error_message,
+          progress: result.progress,
+          processing_stage: result.processing_stage
+        };
+        
+        // Update the document in our state as well
+        this.updateDocumentInState({
+          document_id: document.id,
+          filename: document.filename,
+          uploaded_at: document.uploaded_at,
+          status: document.status,
+          processed_at: document.processed_at,
+          raw_text: document.raw_text,
+          extracted_data: document.extracted_data,
+          ai_insights: document.ai_insights,
+          error_message: document.error_message,
+          progress: document.progress,
+          processing_stage: document.processing_stage
+        });
+        
+        console.log(`Mapped document ${documentId}:`, document);
+        return document;
+      }),
       catchError(error => {
         console.error(`Error fetching document ${documentId}:`, error);
         return of(null);
       })
+    );
+  }
+
+  deleteDocument(documentId: string): Observable<any> {
+    return this.http.delete(`${this.API_BASE_URL}/documents/${documentId}`).pipe(
+      tap(() => {
+        // Remove the document from the local state
+        const currentDocs = this.documentsSubject.value;
+        const filteredDocs = currentDocs.filter(doc => doc.id !== documentId);
+        this.documentsSubject.next(filteredDocs);
+      }),
+      catchError(this.handleError)
     );
   }
 
