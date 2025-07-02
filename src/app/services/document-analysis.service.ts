@@ -1,24 +1,47 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError, of } from 'rxjs';
+import { Observable, throwError, of } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { HealthDocument, DocumentStatus, UploadResponse, AnalysisResultResponse } from '../models/document.model';
 
 @Injectable({ providedIn: 'root' })
 export class DocumentAnalysisService {
   private readonly API_BASE_URL = 'http://localhost:8000/api/v1';
-  private documentsSubject = new BehaviorSubject<HealthDocument[]>([]);
-  public readonly documents$ = this.documentsSubject.asObservable();
+  
+  // 🚀 Modern Angular 19: Signals instead of BehaviorSubject
+  private documentsSignal = signal<HealthDocument[]>([]);
+  public readonly documents = this.documentsSignal.asReadonly();
+  
+  // 🚀 Modern Angular 19: inject() function instead of constructor injection
+  private http = inject(HttpClient);
+  
+  // 🚀 Computed signals for derived state
+  public readonly processingDocuments = computed(() => 
+    this.documents().filter(doc => doc.status === DocumentStatus.PROCESSING)
+  );
+  
+  public readonly completedDocuments = computed(() => 
+    this.documents().filter(doc => doc.status === DocumentStatus.COMPLETE)
+  );
+  
+  public readonly documentCount = computed(() => this.documents().length);
 
-  constructor(private http: HttpClient) {
+  constructor() {
     this.loadInitialDocuments();
+    
+    // 🚀 Effect for debugging and side effects
+    effect(() => {
+      const docs = this.documents();
+      const processing = this.processingDocuments().length;
+      console.log(`📊 Documents state: ${docs.length} total, ${processing} processing`);
+    });
   }
 
   loadInitialDocuments(): void {
     this.http.get<HealthDocument[]>(`${this.API_BASE_URL}/documents`).pipe(
       catchError(this.handleError)
     ).subscribe(documents => {
-      this.documentsSubject.next(documents);
+      this.documentsSignal.set(documents);
     });
   }
 
@@ -36,7 +59,8 @@ export class DocumentAnalysisService {
           uploaded_at: new Date().toISOString(),
           status: DocumentStatus.PROCESSING,
         };
-        this.documentsSubject.next([newDoc, ...this.documentsSubject.value]);
+        // 🚀 Signals: Update immutably
+        this.documentsSignal.update(docs => [newDoc, ...docs]);
         this.streamDocumentStatus(response.document_id);
       }),
       catchError(this.handleError)
@@ -68,9 +92,14 @@ export class DocumentAnalysisService {
   }
 
   private updateDocumentInState(result: AnalysisResultResponse): void {
-    const currentDocs = this.documentsSubject.value;
-    const index = currentDocs.findIndex(d => d.id === result.document_id);
-    if (index !== -1) {
+    // 🚀 Signals: Immutable update pattern
+    this.documentsSignal.update(currentDocs => {
+      const index = currentDocs.findIndex(d => d.id === result.document_id);
+      if (index === -1) {
+        console.warn(`⚠️ Document ${result.document_id} not found in current state for update`);
+        return currentDocs;
+      }
+
       const updatedDoc: HealthDocument = {
         id: result.document_id,
         filename: result.filename,
@@ -89,29 +118,31 @@ export class DocumentAnalysisService {
         progress: result.progress,
         processing_stage: result.processing_stage,
       };
+      
       const newDocs = [...currentDocs];
       newDocs[index] = updatedDoc;
       console.log(`🔄 State updated for ${result.document_id}: ${result.progress}% (${result.processing_stage})`);
-      this.documentsSubject.next(newDocs);
-    } else {
-      console.warn(`⚠️ Document ${result.document_id} not found in current state for update`);
-    }
+      return newDocs;
+    });
   }
 
   private updateDocumentStatusToError(documentId: string, errorMessage: string): void {
-    const currentDocs = this.documentsSubject.value;
-    const index = currentDocs.findIndex(d => d.id === documentId);
-    if (index !== -1) {
+    // 🚀 Signals: Immutable update for error handling
+    this.documentsSignal.update(currentDocs => {
+      const index = currentDocs.findIndex(d => d.id === documentId);
+      if (index === -1) return currentDocs;
+
       const docToUpdate = currentDocs[index];
       const updatedDoc: HealthDocument = {
         ...docToUpdate,
         status: DocumentStatus.ERROR,
         error_message: errorMessage
       };
+      
       const newDocs = [...currentDocs];
       newDocs[index] = updatedDoc;
-      this.documentsSubject.next(newDocs);
-    }
+      return newDocs;
+    });
   }
 
   getDocument(documentId: string): Observable<HealthDocument | null> {
@@ -170,10 +201,10 @@ export class DocumentAnalysisService {
   deleteDocument(documentId: string): Observable<any> {
     return this.http.delete(`${this.API_BASE_URL}/documents/${documentId}`).pipe(
       tap(() => {
-        // Remove the document from the local state
-        const currentDocs = this.documentsSubject.value;
-        const filteredDocs = currentDocs.filter(doc => doc.id !== documentId);
-        this.documentsSubject.next(filteredDocs);
+        // 🚀 Signals: Remove document from state immutably
+        this.documentsSignal.update(currentDocs => 
+          currentDocs.filter(doc => doc.id !== documentId)
+        );
       }),
       catchError(this.handleError)
     );
