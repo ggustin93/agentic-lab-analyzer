@@ -21,11 +21,15 @@ export interface HealthDocument {
   readonly extracted_data?: HealthMarker[];
   readonly ai_insights?: string;
   readonly error_message?: string;
+  readonly progress?: number;
+  readonly processing_stage?: 'ocr_extraction' | 'ai_analysis' | 'saving_results' | 'complete';
 }
 
 // Wrapper class that provides camelCase accessors for snake_case properties
 export class DocumentViewModel {
-  constructor(private document: HealthDocument) {}
+  constructor(private document: HealthDocument) {
+    console.log('Creating DocumentViewModel with document:', document);
+  }
 
   get id(): string { return this.document.id; }
   get filename(): string { return this.document.filename; }
@@ -36,9 +40,32 @@ export class DocumentViewModel {
   get uploadedAt(): string { return this.document.uploaded_at; }
   get processedAt(): string | undefined { return this.document.processed_at; }
   get rawText(): string | undefined { return this.document.raw_text; }
-  get extractedData(): HealthMarker[] | undefined { return this.document.extracted_data; }
+  get extractedData(): HealthMarker[] | undefined { 
+    console.log('Getting extractedData:', this.document.extracted_data);
+    return this.document.extracted_data; 
+  }
   get aiInsights(): string | undefined { return this.document.ai_insights; }
   get errorMessage(): string | undefined { return this.document.error_message; }
+  get progress(): number | undefined { return this.document.progress; }
+  get processingStage(): string | undefined { return this.document.processing_stage; }
+  
+  // Helper method to get stage-specific progress message
+  get progressMessage(): string {
+    if (!this.processingStage) return 'Processing...';
+    
+    switch (this.processingStage) {
+      case 'ocr_extraction':
+        return 'Extracting text from document...';
+      case 'ai_analysis':
+        return 'Analyzing health data...';
+      case 'saving_results':
+        return 'Finalizing results...';
+      case 'complete':
+        return 'Processing complete';
+      default:
+        return 'Processing...';
+    }
+  }
 }
 
 export interface UploadResponse {
@@ -57,4 +84,6 @@ export interface AnalysisResultResponse {
   readonly ai_insights?: string;
   readonly error_message?: string;
   readonly processed_at?: string;
+  readonly progress?: number;
+  readonly processing_stage?: 'ocr_extraction' | 'ai_analysis' | 'saving_results' | 'complete';
 }
