@@ -551,10 +551,15 @@ export class LabMarkerInfoService {
 
   // Check if a reference range seems incomplete (for OCR validation)
   isReferenceRangeIncomplete(range: string): boolean {
+    // Only consider truly missing or completely invalid ranges as incomplete
+    // Be more conservative - trust OCR ranges unless they're clearly broken
     return !range || 
+           range.trim() === '' ||
            range === '-' || 
-           range.includes('...') || 
-           range.includes('depending') ||
-           range.trim().length < 3;
+           range === 'N/A' ||
+           range === 'n/a' ||
+           range.includes('failed') ||
+           range.includes('error') ||
+           range.trim().length < 2; // Very short ranges like single characters
   }
 } 
