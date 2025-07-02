@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Frontend Service
   frontend:
@@ -25,8 +23,6 @@ services:
       - ./backend/.env
     volumes:
       - ./backend:/app
-      - uploads:/app/uploads
-      - data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 30s
