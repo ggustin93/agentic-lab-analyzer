@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](docker-compose.yml)
 
-A modern, agent-based platform for analyzing medical lab documents with AI-powered insights. This full-stack application provides secure document uploads, performs OCR and intelligent analysis, and delivers structured results through a responsive frontend.
+An AI-powered platform for analyzing medical lab documents, built to demonstrate modern full-stack development practices. This application provides document upload, OCR processing, intelligent analysis, and structured results through a responsive Angular frontend.
 
 ## 🚀 Key Features
 
@@ -52,14 +52,14 @@ The system employs a decoupled architecture with three main components:
 - **OnPush Change Detection**: Optimized rendering cycles
 - **Lazy Loading**: Improved initial load performance
 
-## 🔄 Current Implementation vs. Future Roadmap
+## 🔄 Implementation Status
 
-| Component | Current (MVP) | Planned Evolution | Status |
-|-----------|---------------|-------------------|--------|
-| OCR Engine | Mistral AI | docTR (local ML) | In Development |
-| Analysis Engine | Chutes.AI | Ollama (local LLM) | Planned |
-| Storage | Supabase Cloud | Self-hosted Supabase | Planned |
-| Updates | SSE | WebSockets | Planned |
+| Component | Current (MVP) | Future Considerations | Status |
+|-----------|---------------|----------------------|--------|
+| OCR Engine | Mistral AI | docTR (local ML) | Functional |
+| Analysis Engine | Chutes.AI | Ollama (local LLM) | Functional |
+| Storage | Supabase Cloud | Self-hosted Supabase | Functional |
+| Updates | SSE | WebSockets | Functional |
 
 ## ⚙️ Tech Stack
 
@@ -69,9 +69,9 @@ The system employs a decoupled architecture with three main components:
 - **AI Services**: Mistral AI (OCR), Chutes.AI (Analysis)
 - **DevOps**: Docker, Docker Compose, GitHub Actions
 
-## ⚠️ Security Notice: MVP Configuration
+## ⚠️ Development Notice
 
-> **Note**: The current security configuration is for MVP development purposes only. The Supabase bucket is public and Row Level Security (RLS) is not yet enabled. This is a known issue tracked for resolution before production deployment.
+> **Note**: This is a showcase/development application. The current Supabase configuration uses a public bucket for simplicity. Production deployment would require implementing Row Level Security (RLS) and proper authentication mechanisms.
 
 ## 🚀 Getting Started
 
@@ -106,7 +106,7 @@ The system employs a decoupled architecture with three main components:
 
 ## ✅ Testing Strategy
 
-This project follows a pragmatic, risk-based testing strategy focused on ensuring the reliability of core user journeys and complex logic. The current test suite provides a high degree of confidence for the MVP.
+This project follows a pragmatic, risk-based testing strategy focused on ensuring the reliability of core user journeys and complex logic. The current test suite provides high confidence for the MVP while maintaining development velocity.
 
 ### Current Test Coverage
 
@@ -140,28 +140,54 @@ npm test
 npm run e2e:open
 ```
 
-**📊 Current Test Results:**
+**📊 Current Results:**
 - ✅ **9/9 Unit Tests Passing** (DocumentAnalysisService + DataTableComponent)
 - ✅ **Docker E2E Infrastructure** (Cypress running in containerized environment)  
 - ✅ **Critical Happy Path Coverage** (Upload flow + Empty state handling)
 
-### Future Testing Enhancements (Roadmap)
+## 🔄 CI/CD Pipeline
 
-The current suite is a strong foundation. For a production-grade application, the following testing areas would be prioritized next:
+This project uses GitHub Actions for Continuous Integration, designed to validate code quality and stability on every push and pull request.
 
-- **Error Handling Tests:** Add unit tests to the `DocumentAnalysisService` to verify that API errors (e.g., 500 status on upload) are handled gracefully and update the UI state accordingly.
-- **Real-time SSE E2E Test:** Implement a more advanced E2E test using a library like `cypress-sse` to assert that the UI correctly displays the *in-progress* states (`10%`, `50%`, `90%`) as mock SSE events are received.
-- **Visual Regression Testing:** Integrate a tool like Percy or Chromatic to take snapshots of UI components and prevent unintended visual changes.
-- **Accessibility (a11y) Testing:** Add automated accessibility checks to the E2E suite using `cypress-axe` to ensure the application is usable by everyone.
-- **More Component Test Cases:** Expand component testing to cover edge cases, such as empty data states and user interactions (e.g., clicking the delete button and confirming the service method is called).
+### Frontend-Focused CI Strategy
 
-## 🛣️ Roadmap
+As this project showcases frontend expertise, the CI pipeline is configured to run comprehensive checks exclusively for the Angular application, demonstrating both technical excellence and strategic focus.
 
-- **Local-First Processing**: Complete local ML/LLM alternatives for privacy-focused deployment
-- **Enhanced Security**: Enable RLS and implement proper authentication
-- **WebSocket Communication**: Replace SSE with bidirectional WebSockets
-- **Application Monitoring**: Add Prometheus/Grafana integration
-- **Multi-Tenant Support**: Enable multi-user functionality with proper isolation
+The active `frontend-checks` job validates:
+- **Code Style:** Ensures all code adheres to the project's linting rules using ESLint
+- **Unit & Component Tests:** Executes the full test suite in a headless browser to catch regressions in logic and UI components
+- **Production Build:** Compiles the application for production, which validates syntax correctness and dependency configuration
+
+### Full-Stack Awareness
+
+The workflow file (`.github/workflows/ci.yml`) also contains a **disabled `backend-checks` job**. This demonstrates understanding of full-stack CI structure while maintaining focus on frontend expertise. In a production environment, this job would be enabled to run `pytest` for the Python backend, using GitHub Secrets for secure API key management.
+
+### Future CI/CD Enhancements
+
+For production deployment, the pipeline could be extended with:
+- **Automated Deployment:** Deploy to staging/production environments
+- **Docker Image Building:** Build and push container images to registry
+- **Security Scanning:** Dependency vulnerability checks and SAST analysis
+- **Performance Testing:** Lighthouse CI for performance regression detection
+
+## 🛣️ Future Enhancements
+
+For production deployment, this application could be enhanced with:
+
+- **Enhanced Security**: Row Level Security (RLS) and user authentication
+- **Local Processing**: Local ML/LLM alternatives for data privacy
+- **Advanced Communication**: WebSocket integration for bidirectional updates
+- **Monitoring**: Application performance and health monitoring
+- **Multi-Tenancy**: Support for multiple users with data isolation
+
+## 📖 Development Notes
+
+This project demonstrates modern Angular development patterns including:
+- Signal-based state management (Angular 19)
+- OnPush change detection optimization
+- Comprehensive testing strategy (unit, component, E2E)
+- Docker-based development environment
+- Professional CI/CD practices
 
 ## 📝 License
 
