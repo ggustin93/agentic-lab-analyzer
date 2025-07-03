@@ -1,10 +1,22 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HealthMarker } from '../../models/document.model';
 import { MathFormulaComponent } from '../math-formula/math-formula.component';
 import { LabMarkerInfoService, LabMarkerInfo } from '../../services/lab-marker-info.service';
 import { TooltipDirective } from '../../directives/tooltip.directive';
 
+/**
+ * Data Table Component - Angular 19 Modernized
+ * 
+ * Displays extracted health marker data in a structured table format.
+ * Demonstrates Angular 19 best practices:
+ * - Signal-based inputs using input() instead of @Input() decorator
+ * - New control flow (@for, @if) instead of structural directives
+ * - inject() function for dependency injection
+ * - Computed signals for derived state and complex calculations
+ * - OnPush change detection for optimal performance
+ * - Pure OCR-first data display philosophy (no fallback contamination)
+ */
 @Component({
   selector: 'app-data-table',
   standalone: true,
@@ -26,50 +38,68 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of data" 
+            <!-- 
+              Angular 19 Modern Control Flow: @for
+              - Replaces *ngFor structural directive
+              - Better performance and type safety
+              - Cleaner syntax with track expressions
+              - Automatic change detection optimization
+            -->
+            @for (item of data(); track item.marker) {
+              <tr 
                 [class.highlight-low]="getValueStatus(item) === 'watch'"
                 [class.highlight-high]="getValueStatus(item) === 'high'"
                 [style.background-color]="getRowBackgroundColor(item)">
-              <td class="relative">
-                <div class="flex items-center space-x-2">
-                  <span>{{ item.marker }}</span>
-                  <svg *ngIf="getMarkerInfo(item.marker)" 
-                       class="w-4 h-4 text-blue-500 cursor-help" 
-                       fill="currentColor" 
-                       viewBox="0 0 20 20"
-                       [appTooltip]="getTooltipContent(item.marker)"
-                       theme="medical"
-                       placement="top"
-                       [maxWidth]="350">
-                    <path fill-rule="evenodd" 
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
-                          clip-rule="evenodd" />
-                  </svg>
-                </div>
-              </td>
-              <td [style.color]="getValueColor(item)" 
-                  [style.font-weight]="getValueWeight(item)">
-                <div class="flex items-center space-x-2">
-                  <span>{{ item.value }}</span>
-                  <span *ngIf="getValueStatus(item) === 'watch'" 
-                        class="status-badge low">
-                    LOW
-                  </span>
-                  <span *ngIf="getValueStatus(item) === 'high'" 
-                        class="status-badge high">
-                    HIGH
-                  </span>
-                </div>
-              </td>
-              <td>
-                <app-math-formula [expression]="item.unit"></app-math-formula>
-              </td>
-              <td>
-                <div class="flex items-center space-x-2">
-                  <span>{{ getDisplayReferenceRange(item) }}</span>
-                </div>
-              </td>
-            </tr>
+                
+                <td class="relative">
+                  <div class="flex items-center space-x-2">
+                    <span>{{ item.marker }}</span>
+                    <!-- 
+                      Angular 19 Modern Control Flow: @if
+                      - Replaces *ngIf structural directive  
+                      - Better performance and readability
+                      - Improved tree-shaking and bundle size
+                    -->
+                    @if (getMarkerInfo(item.marker)) {
+                      <svg class="w-4 h-4 text-blue-500 cursor-help" 
+                           fill="currentColor" 
+                           viewBox="0 0 20 20"
+                           [appTooltip]="getTooltipContent(item.marker)"
+                           theme="medical"
+                           placement="top"
+                           [maxWidth]="350">
+                        <path fill-rule="evenodd" 
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
+                              clip-rule="evenodd" />
+                      </svg>
+                    }
+                  </div>
+                </td>
+                
+                <td [style.color]="getValueColor(item)" 
+                    [style.font-weight]="getValueWeight(item)">
+                  <div class="flex items-center space-x-2">
+                    <span>{{ item.value }}</span>
+                    @if (getValueStatus(item) === 'watch') {
+                      <span class="status-badge low">LOW</span>
+                    }
+                    @if (getValueStatus(item) === 'high') {
+                      <span class="status-badge high">HIGH</span>
+                    }
+                  </div>
+                </td>
+                
+                <td>
+                  <app-math-formula [expression]="item.unit"></app-math-formula>
+                </td>
+                
+                <td>
+                  <div class="flex items-center space-x-2">
+                    <span>{{ getDisplayReferenceRange(item) }}</span>
+                  </div>
+                </td>
+              </tr>
+            }
           </tbody>
         </table>
       </div>
@@ -78,23 +108,62 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DataTableComponent {
-  @Input() set data(value: HealthMarker[]) {
-    this._data = value || [];
-    console.log('Data table received:', this._data);
-  }
+  /**
+   * Modern Angular 19 Signal Input
+   * 
+   * Using input() signal instead of @Input() decorator:
+   * - Automatic change detection integration
+   * - Better type safety and inference
+   * - Reactive programming patterns
+   * - No need for complex setter/getter logic
+   */
+  readonly data = input<HealthMarker[]>([]);
 
-  get data(): HealthMarker[] {
-    return this._data;
-  }
+  /**
+   * Dependency Injection using inject() Function
+   * 
+   * Modern Angular pattern that:
+   * - Enables better tree-shaking
+   * - Works in functional contexts
+   * - Improves testability  
+   * - Cleaner than constructor injection
+   */
+  private readonly labMarkerService = inject(LabMarkerInfoService);
 
-  private _data: HealthMarker[] = [];
+  /**
+   * Computed Signal for Data Validation
+   * 
+   * Provides a computed property that automatically updates when data changes.
+   * Used for debugging and ensuring data integrity.
+   */
+  readonly dataLength = computed(() => {
+    const currentData = this.data();
+    console.log('Data table received:', currentData);
+    return currentData.length;
+  });
 
-  constructor(private labMarkerService: LabMarkerInfoService) {}
-
+  /**
+   * Get Lab Marker Information
+   * 
+   * Pure function that retrieves marker metadata from the service.
+   * Used for tooltips and additional context.
+   * 
+   * @param markerName - Name of the health marker
+   * @returns Marker information or null if not found
+   */
   getMarkerInfo(markerName: string): LabMarkerInfo | null {
     return this.labMarkerService.getMarkerInfo(markerName);
   }
 
+  /**
+   * Generate Tooltip Content
+   * 
+   * Creates rich HTML tooltip content with medical information.
+   * Includes clinical significance, interpretations, and standard ranges.
+   * 
+   * @param markerName - Name of the health marker
+   * @returns HTML string for tooltip display
+   */
   getTooltipContent(markerName: string): string {
     const info = this.getMarkerInfo(markerName);
     if (!info) return '';
@@ -135,6 +204,16 @@ export class DataTableComponent {
     `;
   }
 
+  /**
+   * Get Display Reference Range - Pure OCR Strategy
+   * 
+   * CRITICAL PRINCIPLE: Shows ONLY what was extracted by OCR.
+   * Never contaminates display with fallback ranges to maintain data integrity.
+   * This ensures users see exactly what the system detected from documents.
+   * 
+   * @param item - Health marker data
+   * @returns OCR-extracted reference range or empty string
+   */
   getDisplayReferenceRange(item: HealthMarker): string {
     // ONLY show what was actually extracted by OCR - NEVER fallback ranges in the table
     const ocrRange = item.reference_range || '';
@@ -143,7 +222,15 @@ export class DataTableComponent {
     return ocrRange || '';
   }
 
-  // NEW: Get the range to use for value comparison (OCR only!)
+  /**
+   * Get Comparison Reference Range - OCR Only for Highlighting
+   * 
+   * CRITICAL PRINCIPLE: Uses ONLY OCR ranges for out-of-range comparison.
+   * Fallback ranges are never used for highlighting to prevent false positives.
+   * 
+   * @param item - Health marker data
+   * @returns OCR reference range for comparison or null if unavailable
+   */
   private getComparisonReferenceRange(item: HealthMarker): string | null {
     // ONLY use OCR ranges for out-of-range comparison
     // Use whatever OCR extracted, even if it seems incomplete
@@ -157,6 +244,17 @@ export class DataTableComponent {
     return ocrRange.trim();
   }
 
+  /**
+   * Get Value Color Based on Status
+   * 
+   * Returns appropriate color for health marker values:
+   * - Amber for low/watch values
+   * - Red for high values  
+   * - Green for normal values
+   * 
+   * @param item - Health marker data
+   * @returns CSS color value
+   */
   getValueColor(item: HealthMarker): string {
     const status = this.getValueStatus(item);
     switch (status) {
@@ -166,11 +264,27 @@ export class DataTableComponent {
     }
   }
 
+  /**
+   * Get Value Font Weight Based on Status
+   * 
+   * Makes abnormal values bold for better visual emphasis.
+   * 
+   * @param item - Health marker data
+   * @returns CSS font-weight value
+   */
   getValueWeight(item: HealthMarker): string {
     const status = this.getValueStatus(item);
     return status !== 'normal' ? 'bold' : 'normal';
   }
 
+  /**
+   * Get Row Background Color Based on Status
+   * 
+   * Provides subtle background highlighting for abnormal values.
+   * 
+   * @param item - Health marker data
+   * @returns CSS background-color value
+   */
   getRowBackgroundColor(item: HealthMarker): string {
     const status = this.getValueStatus(item);
     switch (status) {
@@ -180,6 +294,19 @@ export class DataTableComponent {
     }
   }
 
+  /**
+   * Determine Value Status - Advanced Range Analysis
+   * 
+   * CRITICAL PRINCIPLE: Only uses OCR-extracted ranges for comparison.
+   * Implements sophisticated range parsing for various formats:
+   * - Standard ranges: "70.0 - 100.0"
+   * - Upper bounds: "<100", "< 100"  
+   * - Lower bounds: ">40", "> 40"
+   * - Malformed ranges: "<6 - 6.0" (treated as upper bound)
+   * 
+   * @param item - Health marker data
+   * @returns Status classification: 'normal' | 'watch' | 'high'
+   */
   getValueStatus(item: HealthMarker): 'normal' | 'watch' | 'high' {
     // FIXED: Only use OCR ranges for out-of-range comparison
     const comparisonRange = this.getComparisonReferenceRange(item);
