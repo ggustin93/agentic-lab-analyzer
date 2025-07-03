@@ -60,7 +60,6 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit for medical documents
   standalone: true,
   imports: [CommonModule],
   templateUrl: './upload-zone.component.html',
-  styleUrl: './upload-zone.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     'class': 'block'
