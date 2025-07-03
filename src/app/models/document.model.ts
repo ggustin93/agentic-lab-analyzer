@@ -73,6 +73,14 @@ export interface UploadResponse {
   readonly filename: string;
 }
 
+// This represents the raw snake_case data from the backend
+export interface RawHealthMarker {
+  readonly marker: string;
+  readonly value: string;
+  readonly unit?: string;
+  readonly reference_range?: string;
+}
+
 // This should match the JSON from the backend stream
 export interface AnalysisResultResponse {
   readonly document_id: string;
@@ -80,7 +88,7 @@ export interface AnalysisResultResponse {
   readonly filename: string;
   readonly uploaded_at: string;
   readonly raw_text?: string;
-  readonly extracted_data?: any[]; // The backend sends snake_case
+  readonly extracted_data?: RawHealthMarker[]; // Use the new raw interface
   readonly ai_insights?: string;
   readonly error_message?: string;
   readonly processed_at?: string;

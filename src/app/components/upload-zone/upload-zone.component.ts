@@ -52,6 +52,12 @@ const ALLOWED_FILE_TYPES = [
   'image/jpg'
 ] as const;
 
+type AllowedFileType = (typeof ALLOWED_FILE_TYPES)[number];
+
+function isAllowedFileType(type: string): type is AllowedFileType {
+  return (ALLOWED_FILE_TYPES as readonly string[]).includes(type);
+}
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit for medical documents
 
 @Component({
@@ -312,7 +318,7 @@ export class UploadZoneComponent {
     console.log(`📁 UPLOAD ZONE - Processing file: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
     
     // 🔍 MIME Type Validation
-    if (!ALLOWED_FILE_TYPES.includes(file.type as any)) {
+    if (!isAllowedFileType(file.type)) {
       const allowedExtensions = ALLOWED_FILE_TYPES
         .map(type => type.split('/')[1].toUpperCase())
         .join(', ');

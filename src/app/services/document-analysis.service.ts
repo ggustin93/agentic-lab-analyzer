@@ -152,7 +152,8 @@ export class DocumentAnalysisService implements OnDestroy {
     this.setDocumentError(documentId, errorMessage);
   }
 
-  private mapResponseToDocument(result: AnalysisResultResponse): HealthDocument {
+  // Made public for testing purposes
+  public mapResponseToDocument(result: AnalysisResultResponse): HealthDocument {
     return {
       id: result.document_id,
       filename: result.filename,
@@ -173,7 +174,8 @@ export class DocumentAnalysisService implements OnDestroy {
     };
   }
 
-  private updateDocumentInState(document: HealthDocument): void {
+  // Made public for testing purposes
+  public updateDocumentInState(document: HealthDocument): void {
     this.documentsSignal.update(docs => {
       const index = docs.findIndex(d => d.id === document.id);
       if (index === -1) {

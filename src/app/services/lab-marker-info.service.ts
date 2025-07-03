@@ -16,7 +16,7 @@ export interface LabMarkerInfo {
 })
 export class LabMarkerInfoService {
   
-  private labMarkers: { [key: string]: LabMarkerInfo } = {
+  private labMarkers: Record<string, LabMarkerInfo> = {
     // Complete Blood Count (CBC)
     'hémoglobine': {
       name: 'Hémoglobine',
@@ -530,7 +530,7 @@ export class LabMarkerInfoService {
     return this.labMarkers[normalizedName] || null;
   }
 
-  getAllMarkers(): { [key: string]: LabMarkerInfo } {
+  getAllMarkers(): Record<string, LabMarkerInfo> {
     return this.labMarkers;
   }
 
