@@ -5,6 +5,9 @@ import { UploadZoneComponent } from '../../components/upload-zone/upload-zone.co
 import { DocumentListComponent } from '../../components/document-list/document-list.component';
 import { HealthDocument, DocumentStatus } from '../../models/document.model';
 
+// Type alias for processing stages (matches HealthDocument interface)
+type ProcessingStage = 'ocr_extraction' | 'ai_analysis' | 'saving_results' | 'complete' | undefined;
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -223,7 +226,7 @@ export class DashboardComponent implements OnInit {
     return this.processingDocument()?.progress;
   }
 
-  getProcessingStage(): string | undefined {
+  getProcessingStage(): ProcessingStage {
     return this.processingDocument()?.processing_stage;
   }
 

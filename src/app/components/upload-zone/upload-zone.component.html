@@ -1,0 +1,176 @@
+<!-- 
+  🎯 Upload Zone Component Template
+  Expert-level Angular 19 implementation with modern control flow syntax.
+  
+  Features:
+  - Drag & drop file upload with visual feedback
+  - 4-stage progress tracking with animated indicators  
+  - Responsive design with Tailwind utilities
+  - Accessible file input with keyboard support
+  - Real-time progress visualization
+-->
+
+<div 
+  class="upload-zone"
+  [class.dragover]="isDragOver()"
+  [class.processing]="isUploading() || progress() !== undefined"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+  (click)="!isUploading() && fileInput.click()"
+  role="button"
+  tabindex="0"
+  [attr.aria-label]="isUploading() ? 'File is uploading' : 'Click or drag to upload file'"
+  (keydown.enter)="!isUploading() && fileInput.click()"
+  (keydown.space)="!isUploading() && fileInput.click()">
+  
+  <!-- 🎨 Initial Upload State - Clean, inviting interface -->
+  @if (!isUploading() && progress() === undefined) {
+    <div class="flex flex-col items-center space-y-4">
+      <!-- Upload icon with Tailwind utilities for positioning -->
+      <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+      </svg>
+      
+      <div class="text-center">
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+          Drag & Drop Your Health Report Here
+        </h3>
+        <p class="text-gray-600 mb-4">
+          Or click to select a file (PDF, PNG, JPG)
+        </p>
+        <button type="button" class="btn-primary" [disabled]="isUploading()">
+          Select File
+        </button>
+      </div>
+    </div>
+  }
+  
+  <!-- 🔄 Processing State - Advanced 4-stage progress visualization -->
+  @if (isUploading() || progress() !== undefined) {
+    <div class="flex flex-col items-center space-y-4">
+      
+      <!-- Stage Icon Container with smooth transitions -->
+      <div class="relative">
+        <div class="w-16 h-16 flex items-center justify-center rounded-full transition-all duration-500">
+          
+          <!-- 👁️ Stage 1: OCR Extraction -->
+          @if (processingStage() === 'ocr_extraction') {
+            <div class="stage-icon stage-icon--ocr">
+              <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </div>
+          }
+          
+          <!-- 🧠 Stage 2: AI Analysis -->
+          @if (processingStage() === 'ai_analysis') {
+            <div class="stage-icon stage-icon--ai">
+              <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+            </div>
+          }
+          
+          <!-- 💾 Stage 3: Saving Results -->
+          @if (processingStage() === 'saving_results') {
+            <div class="stage-icon stage-icon--saving">
+              <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+              </svg>
+            </div>
+          }
+          
+          <!-- ✅ Stage 4: Complete -->
+          @if (processingStage() === 'complete') {
+            <div class="stage-icon stage-icon--complete">
+              <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+          }
+          
+          <!-- 📄 Default/Fallback State -->
+          @if (!processingStage() || !isValidProcessingStage()) {
+            <div class="stage-icon stage-icon--default">
+              <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+          }
+        </div>
+        
+        <!-- 🌀 Animated spinner overlay (hidden when complete) -->
+        @if (processingStage() !== 'complete') {
+          <div class="absolute inset-0 flex items-center justify-center">
+            <svg class="animate-spin h-6 w-6" [class]="spinnerColorClass()" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+        }
+      </div>
+      
+      <!-- 📊 Progress Information and Visualization -->
+      <div class="text-center w-full max-w-xs">
+        <h3 class="text-lg font-medium mb-2" [class]="textColorClass()">
+          {{ progressText() }}
+        </h3>
+        
+        <!-- Progress bar with smooth animations -->
+        <div class="w-full bg-gray-200 rounded-full h-3 mb-2 shadow-inner">
+          <div class="h-3 rounded-full transition-all duration-500 ease-out" 
+               [class]="progressBarColorClass()"
+               [style.width.%]="progress() || 0"></div>
+        </div>
+        
+        <!-- Progress stats with semantic information -->
+        <div class="flex justify-between items-center">
+          <p class="text-sm font-semibold" [class]="textColorClass()">
+            {{ progress() || 0 }}% complete
+          </p>
+          <p class="text-xs text-gray-500">
+            Stage {{ currentStageNumber() }}/4
+          </p>
+        </div>
+        
+        <!-- 🎯 Stage indicators - Visual breadcrumb for 4-stage process -->
+        <div class="flex justify-center space-x-2 mt-3" role="progressbar" [attr.aria-valuenow]="currentStageNumber()" aria-valuemin="0" aria-valuemax="4">
+          <div class="stage-dot" 
+               [class.stage-dot--active]="currentStageNumber() >= 1"
+               [class.stage-dot--ocr]="currentStageNumber() >= 1"
+               aria-label="OCR Extraction"></div>
+          <div class="stage-dot" 
+               [class.stage-dot--active]="currentStageNumber() >= 2"
+               [class.stage-dot--ai]="currentStageNumber() >= 2"
+               aria-label="AI Analysis"></div>
+          <div class="stage-dot" 
+               [class.stage-dot--active]="currentStageNumber() >= 3"
+               [class.stage-dot--saving]="currentStageNumber() >= 3"
+               aria-label="Saving Results"></div>
+          <div class="stage-dot" 
+               [class.stage-dot--active]="currentStageNumber() >= 4"
+               [class.stage-dot--complete]="currentStageNumber() >= 4"
+               aria-label="Complete"></div>
+        </div>
+      </div>
+    </div>
+  }
+  
+  <!-- 📁 Hidden file input for accessibility and programmatic access -->
+  <input 
+    #fileInput
+    type="file" 
+    class="sr-only" 
+    accept=".pdf,.png,.jpg,.jpeg"
+    (change)="onFileSelected($event)"
+    aria-label="Select health report file">
+</div> 
