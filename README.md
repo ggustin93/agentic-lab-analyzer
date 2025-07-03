@@ -16,8 +16,9 @@ An AI-powered platform for analyzing medical lab documents, built to demonstrate
 
 ## 🏗️ Architecture
 
-The system employs a decoupled architecture with three main components:
+The system employs a decoupled, containerized architecture with three main components: a responsive Angular frontend, a Python/FastAPI backend, and the Supabase platform for database and storage.
 
+### High-Level Diagram
 ```
 ┌───────────────────────┐      ┌───────────────────────────┐      ┌─────────────────────────┐
 │   Angular 19 Frontend │      │      FastAPI Backend      │      │     Supabase Platform     │
@@ -36,6 +37,32 @@ The system employs a decoupled architecture with three main components:
                      │ OCRExtractor│   │ LabInsight  │
                      │ Agent       │   │ Agent       │
                      └───────────┘   └───────────┘
+```
+
+### Project Structure
+
+```
+/
+├── .github/workflows/        # CI/CD pipeline configuration
+├── backend/                  # Python/FastAPI backend application
+│   ├── agents/               # AI agent implementations
+│   ├── services/             # Core business logic (e.g., DocumentProcessor)
+│   ├── main.py               # FastAPI application entrypoint
+│   └── requirements.txt      # Python dependencies
+├── src/                      # Angular frontend application
+│   ├── app/
+│   │   ├── components/       # Reusable UI components
+│   │   ├── services/         # Frontend business logic and API communication
+│   │   └── pages/            # Main application pages/views
+│   ├── index.html            # Main HTML page
+│   └── main.ts               # Angular application entrypoint
+├── supabase/                 # Supabase schema migrations
+│   └── migrations/
+├── cypress/                  # End-to-end tests
+├── docker-compose.yml        # Docker orchestration for local development
+├── Dockerfile.frontend       # Docker build instructions for Angular app
+├── Dockerfile                # Docker build instructions for FastAPI app
+└── README.md                 # You are here!
 ```
 
 ### Backend Design Patterns
