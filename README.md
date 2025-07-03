@@ -104,6 +104,57 @@ The system employs a decoupled architecture with three main components:
    
    Access the frontend at `http://localhost:4200` and the API at `http://localhost:8000`
 
+## ✅ Testing Strategy
+
+This project follows a pragmatic, risk-based testing strategy focused on ensuring the reliability of core user journeys and complex logic. The current test suite provides a high degree of confidence for the MVP.
+
+### Current Test Coverage
+
+1. **Core Service Logic (Unit Test):** The `DocumentAnalysisService` is tested to verify the complete document lifecycle: upload, state updates from mock SSE events, and deletion. This ensures our state management is robust.
+2. **Complex UI Logic (Component Test):** The `DataTableComponent` is tested to confirm that its critical out-of-range value highlighting applies the correct CSS classes based on input data.
+3. **End-to-End Happy Path (E2E Test):** A Cypress test simulates a user uploading a document and viewing the results, using mocked API calls to ensure the components, services, and routing are correctly wired together.
+
+### Running Tests
+
+**🐋 Docker-Based Testing (Recommended):**
+```bash
+# Run all tests in Docker
+npm run test:all:docker
+
+# Run unit tests only
+npm run test:docker
+
+# Run E2E tests only  
+npm run e2e:docker
+
+# Run with coverage
+npm run test:coverage
+```
+
+**🧪 Local Testing:**
+```bash
+# Run unit tests locally
+npm test
+
+# Open Cypress Test Runner
+npm run e2e:open
+```
+
+**📊 Current Test Results:**
+- ✅ **9/9 Unit Tests Passing** (DocumentAnalysisService + DataTableComponent)
+- ✅ **Docker E2E Infrastructure** (Cypress running in containerized environment)  
+- ✅ **Critical Happy Path Coverage** (Upload flow + Empty state handling)
+
+### Future Testing Enhancements (Roadmap)
+
+The current suite is a strong foundation. For a production-grade application, the following testing areas would be prioritized next:
+
+- **Error Handling Tests:** Add unit tests to the `DocumentAnalysisService` to verify that API errors (e.g., 500 status on upload) are handled gracefully and update the UI state accordingly.
+- **Real-time SSE E2E Test:** Implement a more advanced E2E test using a library like `cypress-sse` to assert that the UI correctly displays the *in-progress* states (`10%`, `50%`, `90%`) as mock SSE events are received.
+- **Visual Regression Testing:** Integrate a tool like Percy or Chromatic to take snapshots of UI components and prevent unintended visual changes.
+- **Accessibility (a11y) Testing:** Add automated accessibility checks to the E2E suite using `cypress-axe` to ensure the application is usable by everyone.
+- **More Component Test Cases:** Expand component testing to cover edge cases, such as empty data states and user interactions (e.g., clicking the delete button and confirming the service method is called).
+
 ## 🛣️ Roadmap
 
 - **Local-First Processing**: Complete local ML/LLM alternatives for privacy-focused deployment
