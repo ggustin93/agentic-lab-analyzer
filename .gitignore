@@ -85,6 +85,4 @@ backend/uploads/
 backend/data/
 backend/.venv/
 
-.github/*
-
 __pycache__/*

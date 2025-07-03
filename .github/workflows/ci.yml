@@ -1,51 +1,88 @@
-name: CI Pipeline
+# .github/workflows/ci.yml
 
+name: CI - Frontend Validation
+
+# This workflow runs on every push or pull request to the main branch.
 on:
   push:
-    branches: [ main, feature/iba-final-architecture ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main", "master" ]
 
 jobs:
-  backend:
+  # ===================================================================
+  # ==           FRONTEND (ANGULAR) CHECKS - (ACTIVE)                ==
+  # ===================================================================
+  frontend-checks:
+    name: Frontend (Angular) Validation
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r backend/requirements.txt
-    - name: Lint and Format Check (Ruff)
-      run: |
-        pip install ruff
-        cd backend
-        ruff check .
-        ruff format --check .
-    - name: Run backend tests
-      run: |
-        cd backend
-        pytest
 
-  frontend:
-    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-    - name: Install dependencies
-      run: npm ci
-    - name: Run linting
-      run: npm run lint
-    - name: Build application
-      run: npm run build
-    - name: Run tests
-      # This project does not have a test runner configured. 
-      # This step is a placeholder.
-      run: echo "Skipping frontend tests"
+      # Step 1: Check out the repository code.
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js environment for consistency.
+      - name: Setup Node.js v18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm' # Cache npm packages for faster subsequent runs.
+
+      # Step 3: Install frontend dependencies using the lock file.
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      # Step 4: Run the linter to check for code style issues.
+      - name: Lint Frontend
+        run: npm run lint
+
+      # Step 5: Run frontend unit and component tests in a headless browser.
+      - name: Test Frontend
+        run: npm run test -- --no-watch --browsers=ChromeHeadless
+
+      # Step 6: Perform a production build to catch any Ahead-of-Time (AOT)
+      #         compilation errors. This is a crucial validation step.
+      - name: Build Frontend for Production
+        run: npm run build -- --configuration production
+
+  # ===================================================================
+  # ==            BACKEND (PYTHON) CHECKS - (DISABLED)               ==
+  # ===================================================================
+  # This job is included to show the structure of a full-stack CI pipeline.
+  # It is intentionally commented out to focus this CI on frontend validation,
+  # which is the priority for this role.
+  
+  # backend-checks:
+  #   name: Backend (Python) Validation
+  #   runs-on: ubuntu-latest
+
+  #   defaults:
+  #     run:
+  #       working-directory: ./backend
+
+  #   steps:
+  #     # Step 1: Check out code.
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v4
+
+  #     # Step 2: Set up Python environment.
+  #     - name: Setup Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+  #         cache: 'pip'
+
+  #     # Step 3: Install backend dependencies.
+  #     - name: Install Backend Dependencies
+  #       run: pip install -r requirements.txt
+
+  #     # Step 4: Run backend tests. This would use GitHub Secrets
+  #     # for secure access to API keys.
+  #     - name: Test Backend
+  #       # env:
+  #       #   MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+  #       #   CHUTES_AI_API_KEY: ${{ secrets.CHUTES_AI_API_KEY }}
+  #       #   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  #       #   SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+  #       run: pytest
