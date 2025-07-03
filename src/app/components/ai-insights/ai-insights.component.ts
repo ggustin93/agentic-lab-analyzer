@@ -1,9 +1,21 @@
-import { Component, Input, ChangeDetectionStrategy, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, ChangeDetectionStrategy, effect, computed, signal, input, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MarkdownModule } from 'ngx-markdown';
 import * as katex from 'katex';
 import { marked } from 'marked';
 
+/**
+ * AI Insights Component - Angular 19 Modernized
+ * 
+ * This component renders AI-generated medical insights with LaTeX formula support.
+ * Demonstrates several Angular 19 best practices:
+ * - Signal-based inputs using input() instead of @Input() decorator
+ * - Effect() for side effects instead of OnChanges lifecycle hook
+ * - Computed signals for derived state (processedInsights)
+ * - inject() function for dependency injection
+ * - OnPush change detection for optimal performance
+ * - Pedagogical comments explaining patterns and decisions
+ */
 @Component({
   selector: 'app-ai-insights',
   standalone: true,
@@ -23,7 +35,11 @@ import { marked } from 'marked';
       </div>
       
       <div class="px-6 py-6">
-        <div class="medical-report" [innerHTML]="processedInsights"></div>
+        <!-- 
+          Note: We use a computed signal's value directly in the template.
+          The processedInsights computed automatically updates when insights() changes.
+        -->
+        <div class="medical-report" [innerHTML]="processedInsights()"></div>
       </div>
     </div>
   `,
@@ -225,17 +241,83 @@ import { marked } from 'marked';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AiInsightsComponent implements OnChanges {
-  @Input() insights: string = '';
-  processedInsights: string = '';
+export class AiInsightsComponent {
+  /**
+   * Modern Angular 19 Input Declaration
+   * 
+   * Using input() signal instead of @Input() decorator provides:
+   * - Better type safety and inference
+   * - Automatic change detection integration
+   * - Reactive programming patterns
+   * - No need for OnChanges lifecycle hook
+   */
+  readonly insights = input<string>('');
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['insights']) {
-      this.processedInsights = this.processMarkdownWithLatex(this.insights || '');
-    }
+  /**
+   * Dependency Injection using inject() Function
+   * 
+   * Modern Angular pattern that:
+   * - Provides better tree-shaking
+   * - Works in functional contexts
+   * - Improves testability
+   * - Cleaner than constructor injection
+   */
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  /**
+   * Computed Signal for Derived State
+   * 
+   * Computed signals automatically:
+   * - Recalculate when dependencies change (insights())
+   * - Memoize results for performance
+   * - Integrate with Angular's change detection
+   * - Provide reactive data flow patterns
+   */
+  readonly processedInsights = computed(() => {
+    const insightsValue = this.insights();
+    return this.processMarkdownWithLatex(insightsValue || '');
+  });
+
+  /**
+   * Constructor with Effect for Side Effects
+   * 
+   * Effect() replaces OnChanges for reactive side effects:
+   * - Runs automatically when signals change
+   * - Provides better performance than lifecycle hooks
+   * - Enables functional reactive programming
+   * - Automatically tracks signal dependencies
+   */
+  constructor() {
+    // Effect for debugging/logging insights changes
+    effect(() => {
+      const currentInsights = this.insights();
+      if (currentInsights) {
+        console.log('AI Insights updated:', currentInsights.length, 'characters');
+      }
+    });
+
+    // Effect for triggering change detection when needed
+    effect(() => {
+      // By reading processedInsights(), we establish dependency tracking
+      const processed = this.processedInsights();
+      if (processed) {
+        // Trigger change detection for innerHTML updates
+        // Note: Usually not needed with OnPush + signals, but included for completeness
+        this.cdr.markForCheck();
+      }
+    });
   }
 
-  processMarkdownWithLatex(text: string): string {
+  /**
+   * LaTeX and Markdown Processing Method
+   * 
+   * Pure function that processes markdown with embedded LaTeX formulas.
+   * Separated from reactive logic for better testability and reusability.
+   * 
+   * @param text - Raw markdown text with LaTeX formulas
+   * @returns Processed HTML string with rendered LaTeX
+   */
+  private processMarkdownWithLatex(text: string): string {
     if (!text) return '';
     
     // First, protect LaTeX blocks from markdown processing
@@ -311,6 +393,12 @@ export class AiInsightsComponent implements OnChanges {
     return text;
   }
 
+  /**
+   * Markdown Processing with Fallback
+   * 
+   * Uses marked library with graceful fallback to simple processing.
+   * Pure function design for better testability.
+   */
   private processMarkdown(text: string): string {
     try {
       // Use marked library for better markdown processing
@@ -325,6 +413,12 @@ export class AiInsightsComponent implements OnChanges {
     }
   }
 
+  /**
+   * Simple Markdown Fallback Implementation
+   * 
+   * Basic markdown processing when marked library fails.
+   * Handles essential formatting like headers, bold, italic, lists.
+   */
   private simpleMarkdownFallback(text: string): string {
     return text
       .replace(/^### (.*$)/gim, '<h3>$1</h3>')
