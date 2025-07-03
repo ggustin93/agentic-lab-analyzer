@@ -1,0 +1,12 @@
+{
+  "document_id": "e2e-doc-123",
+  "filename": "report.pdf",
+  "status": "complete",
+  "uploaded_at": "2024-01-01T12:00:00Z",
+  "progress": 100,
+  "processing_stage": "complete",
+  "extracted_data": [
+    { "marker": "Hemoglobin", "value": "18.0", "unit": "g/dL", "reference_range": "13.5 - 17.5" }
+  ],
+  "ai_insights": "# Analysis Report\n\n## Summary\nThis looks fine."
+} 
