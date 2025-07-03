@@ -1,0 +1,21 @@
+<div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-200 bg-blue-50">
+    <div class="flex items-center space-x-3">
+      <div class="p-2 bg-blue-100 rounded-lg">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-semibold text-gray-900">Medical Analysis Report</h3>
+    </div>
+  </div>
+  
+  <div class="px-6 py-6">
+    <!-- 
+      Note: We use a computed signal's value directly in the template.
+      The processedInsights computed automatically updates when insights() changes.
+    -->
+    <div class="medical-report" [innerHTML]="processedInsights()"></div>
+  </div>
+</div>
