@@ -1,3 +1,5 @@
+# backend/services/document_processor.py
+
 import asyncio
 import uuid
 import os
@@ -9,364 +11,269 @@ import logging
 from supabase import create_client, Client
 
 from config.settings import settings
-from models.document_models import Document, AnalysisResult, HealthMarkerDB
 from models.health_models import HealthInsights
-from agents.base import OCRExtractorAgent, LabInsightAgent
+from .base import OCRExtractorAgent
 from .mistral_ocr_service import MistralOCRService
-from .chutes_ai_agent import ChutesAILabAgent
+from .data_extractor_agent import LabDataExtractorAgent
+from .clinical_insight_agent import ClinicalInsightAgent
+
 
 logger = logging.getLogger(__name__)
 
 class DocumentProcessor:
-    """Main service for processing health documents."""
+    """
+    Acts as the central orchestrator for the document analysis pipeline.
+    This service manages the flow of a document through various specialized agents,
+    from initial OCR to final clinical insight generation, while also handling
+    database state and real-time progress updates.
+    """
     
     def __init__(self):
+        """
+        Initializes the processor and its dependent agents.
+        In a larger system, these dependencies would be injected for better
+        testability, but for this project's scope, direct instantiation is sufficient.
+        """
+        # --- Agent Initialization ---
         self.ocr_agent: OCRExtractorAgent = MistralOCRService()
-        self.insight_agent: LabInsightAgent = ChutesAILabAgent()
+        self.extractor_agent: LabDataExtractorAgent = LabDataExtractorAgent()
+        self.insight_agent: ClinicalInsightAgent = ClinicalInsightAgent()
+        
+        # --- Database & Storage Client ---
         self.supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        self.bucket_name = settings.SUPABASE_BUCKET_NAME
+        self.bucket_name: str = settings.SUPABASE_BUCKET_NAME
     
     async def process_document(self, file_content: bytes, filename: str) -> str:
-        """Process a document and return document ID"""
+        """
+        Handles the initial upload of a document and initiates the asynchronous
+        processing pipeline in the background.
+
+        Args:
+            file_content: The binary content of the file.
+            filename: The original name of the file.
+
+        Returns:
+            The unique ID of the document record created.
+            
+        Raises:
+            Exception: If the initial upload or database record creation fails.
+        """
         document_id = str(uuid.uuid4())
         file_extension = os.path.splitext(filename)[1]
         storage_path = f"{document_id}{file_extension}"
 
         try:
-            # Upload file to Supabase Storage
+            # Step 1: Upload the raw file to Supabase Storage for persistence.
+            # TODO: Infer content-type dynamically instead of hardcoding.
             self.supabase.storage.from_(self.bucket_name).upload(
                 path=storage_path,
                 file=file_content,
-                file_options={"cache-control": "3600", "content-type": "application/pdf"}
+                file_options={"content-type": "application/pdf"}
             )
             public_url = self.supabase.storage.from_(self.bucket_name).get_public_url(storage_path)
 
-            # Create initial document record in Supabase
+            # Step 2: Create the initial document record in the database.
             self._create_document_record(document_id, filename, storage_path, public_url)
 
-            # Start background processing
-            asyncio.create_task(self._process_document_async(document_id, public_url, filename))
+            # Step 3: Schedule the main processing pipeline to run in the background.
+            # This allows us to return an immediate response to the client.
+            asyncio.create_task(self._process_document_async(document_id, public_url, file_extension))
             
             return document_id
             
         except Exception as e:
-            logger.error(f"Document processing error: {e}", exc_info=True)
-            # If the record was created, update its status to error
-            if self._load_document_data(document_id):
-                 self._save_document_data(document_id, {"status": "error", "error_message": str(e)})
+            logger.error(f"Initial document processing error for {filename}: {e}", exc_info=True)
+            # Attempt to mark the record as failed if it was created.
+            try:
+                self._update_progress(document_id, 100, "error", error_message=str(e))
+            except Exception as db_e:
+                logger.error(f"Could not update document {document_id} to error state: {db_e}")
             raise
 
     def _create_document_record(self, document_id: str, filename: str, storage_path: str, public_url: str):
-        """Create the initial document record in the database."""
+        """Creates the initial document metadata record in the 'documents' table."""
+        document_data = {
+            "id": document_id,
+            "filename": filename,
+            "status": "processing",
+            "storage_path": storage_path,
+            "public_url": public_url,
+            "upload_date": datetime.now().isoformat()
+        }
+        self.supabase.table("documents").insert(document_data).execute()
+        logger.info(f"Created initial record for document {document_id}")
+
+    async def _process_document_async(self, document_id: str, file_url: str, file_type: str):
+        """
+        Executes the main multi-agent processing pipeline asynchronously.
+
+        This method orchestrates the flow of data through the following stages:
+        1. OCR Extraction: Converts the document to raw text.
+        2. Data Extraction & Analysis: Extracts structured data and analyzes it.
+        3. Clinical Insight Generation: Generates human-readable insights.
+        4. Persistence: Saves the final results to the database.
+        """
         try:
-            document_data = {
-                "id": document_id,
-                "filename": filename,
-                "status": "processing",
-                "storage_path": storage_path,
-                "public_url": public_url,
-                "upload_date": datetime.now().isoformat()  # Explicitly set upload_date as ISO string
-            }
-            self.supabase.table("documents").insert(document_data).execute()
-            logger.info(f"Successfully created initial record for document {document_id}")
-        except Exception as e:
-            logger.error(f"Error creating initial record for document {document_id}: {e}", exc_info=True)
-            raise
-
-    async def _process_document_async(self, document_id: str, file_url: str, filename: str):
-        """Async processing of document with PydanticAI"""
-        try:
-            document_data = self._load_document_data(document_id)
-            if not document_data:
-                logger.error(f"Could not load document data for {document_id} to start async processing.")
-                return
-
-            logger.info(f"Starting PydanticAI processing for document {document_id}")
-            
-            # Update status with progress information - OCR starting
-            logger.info(f"📄 Stage 1/4: Starting OCR extraction for {document_id}")
-            self._save_document_data(document_id, {
-                "status": "processing",
-                "processing_stage": "ocr_extraction",
-                "progress": 10
-            })
-            
-            # Use the ocr_agent to extract text from the file
-            raw_text = self.ocr_agent.extract_text(file_url)
-
+            # --- Agent 1: OCR Extraction ---
+            self._update_progress(document_id, 10, "ocr_extraction")
+            raw_text = await self.ocr_agent.extract_text(file_url, file_type)
             if not raw_text or not raw_text.strip():
-                raise ValueError("OCR process yielded no text")
+                raise ValueError("OCR process yielded no text.")
             
-            # Update status with progress information - OCR complete, starting analysis
-            logger.info(f"🧠 Stage 2/4: Starting AI analysis for {document_id} (extracted {len(raw_text)} characters)")
-            self._save_document_data(document_id, {
-                "status": "processing",
-                "processing_stage": "ai_analysis",
-                "progress": 50,
-                "raw_text": raw_text
-            })
+            # Persist raw text as soon as it's available for debugging and transparency.
+            self.supabase.table("documents").update({"raw_text": raw_text}).eq("id", document_id).execute()
+
+            # --- Agent 2: Extract structured data & analyze ranges ---
+            self._update_progress(document_id, 40, "ai_analysis_extraction")
+            async with self.extractor_agent as extractor_agent:
+                analyzed_data = await extractor_agent.extract_and_analyze(raw_text)
             
-            # Get health insights using the extracted text
-            insights_result = await self.insight_agent.analyze_text(raw_text)
+            # --- Agent 3: Clinical Insight Generation ---
+            self._update_progress(document_id, 70, "ai_analysis_insights")
+            async with self.insight_agent as insight_agent:
+                insight_dict = await insight_agent.generate_insights(analyzed_data)
 
-            # Update status with progress information - analysis complete, saving results
-            logger.info(f"💾 Stage 3/4: Saving analysis results for {document_id}")
-            self._save_document_data(document_id, {
-                "status": "processing",
-                "processing_stage": "saving_results",
-                "progress": 90
-            })
+            # --- Final Response Construction & Persistence ---
+            self._update_progress(document_id, 90, "saving_results")
+            
+            final_data = HealthInsights(data=analyzed_data, **insight_dict)
 
-            # Give users time to see the saving stage (and actually perform the save operations)
-            import asyncio
-            await asyncio.sleep(0.5)  # Half-second delay to show the saving stage
-
-            # Final data structure for saving
-            final_data = {
-                "id": document_id,
-                "filename": filename,
-                "status": "complete",
-                "raw_text": raw_text,
-                "analysis": insights_result.model_dump(mode='json'),
-                "progress": 100,
-                "processing_stage": "complete"
+            analysis_payload = {
+                "document_id": document_id,
+                "structured_data": final_data.model_dump(mode='json'),
+                "insights": self._format_insights_as_markdown(final_data)
             }
-            self._save_document_data(document_id, final_data)
-            logger.info(f"✅ Stage 4/4: Document {document_id} processing complete!")
+            self.supabase.table("analysis_results").upsert(analysis_payload, on_conflict="document_id").execute()
+
+            # Mark the process as complete.
+            self._update_progress(document_id, 100, "complete")
+            logger.info(f"Successfully processed and saved document {document_id}")
 
         except Exception as e:
             logger.error(f"Async processing error for document {document_id}: {e}", exc_info=True)
-            error_data = {
-                "status": "error",
-                "error_message": str(e)
-            }
-            self._save_document_data(document_id, error_data)
+            self._update_progress(document_id, 100, "error", error_message=str(e))
 
+    def _update_progress(self, document_id: str, progress: int, stage: str, error_message: Optional[str] = None):
+        """
+        Updates the document's progress and status in the database.
+        This is a central helper to ensure consistent state management.
+        """
+        status = "processing"
+        if error_message:
+            status = "error"
+        elif progress == 100:
+            status = "complete"
+
+        payload = {
+            "progress": progress,
+            "processing_stage": stage,
+            "status": status,
+        }
+        if error_message:
+            payload["error_message"] = error_message
+        if status == "complete":
+            payload["processed_at"] = datetime.now().isoformat()
+        
+        logger.info(f"Updating document {document_id}: {payload}")
+        self.supabase.table("documents").update(payload).eq("id", document_id).execute()
+        
     def _format_insights_as_markdown(self, insights: HealthInsights) -> str:
-        # Helper function to convert the structured insights object to a single markdown string for the frontend
-        md = f"# Analysis Report\n\n## Summary\n{insights.summary}\n\n"
-        md += "## Key Findings\n" + "".join([f"- {finding}\n" for finding in insights.key_findings])
-        md += "\n## Recommendations\n" + "".join([f"- {rec}\n" for rec in insights.recommendations])
-        md += f"\n---\n\n**Disclaimer:** {insights.disclaimer}"
-        return md
+        """Converts the final HealthInsights object into a formatted markdown string."""
+        md_parts = [
+            f"## Health Analysis Summary\n\n{insights.summary}\n",
+            "### Key Findings\n"
+        ]
+        md_parts.extend(f"- {finding}\n" for finding in insights.key_findings)
+        md_parts.append("\n### Recommendations\n")
+        md_parts.extend(f"- {rec}\n" for rec in insights.recommendations)
+        md_parts.append(f"\n---\n\n*{insights.disclaimer}*")
+        return "".join(md_parts)
 
     def get_analysis(self, document_id: str) -> Optional[Dict]:
-        """Get analysis data for a document by ID"""
-        try:
-            document_data = self._load_document_data(document_id)
-            if not document_data:
-                return None
-
-            # Format dates as ISO strings
-            upload_date = document_data.get("upload_date")
-            if isinstance(upload_date, datetime):
-                upload_date = upload_date.isoformat()
-                
-            processed_at = document_data.get("processed_at")
-            if isinstance(processed_at, datetime):
-                processed_at = processed_at.isoformat()
-
-            # Base document info that is always present
-            doc = {
-                "document_id": document_id,
-                "status": document_data.get("status"),
-                "filename": document_data.get("filename"),
-                "uploaded_at": upload_date,  # Changed from upload_date to uploaded_at to match frontend
-                "raw_text": document_data.get("raw_text"),
-                "error_message": document_data.get("error_message"),
-                "processed_at": processed_at,
-                "progress": document_data.get("progress"),  # Include progress for SSE updates
-                "processing_stage": document_data.get("processing_stage"),  # Include processing stage for SSE updates
-                "ai_insights": None,
-                "extracted_data": []
-            }
-
-            # Fetch and attach analysis results if the document is complete
-            if doc["status"] == "complete":
-                analysis_result_response = self.supabase.table("analysis_results").select("*").eq("document_id", document_id).maybe_single().execute()
-                
-                if analysis_result_response.data:
-                    analysis_data = analysis_result_response.data
-                    doc["ai_insights"] = analysis_data.get("insights")
-                    
-                    # Fetch markers from the correct table
-                    markers_result = self.supabase.table("health_markers").select("marker_name, value, unit, reference_range").eq("analysis_id", analysis_data['id']).execute()
-                    if markers_result.data:
-                        # Map database column names to what frontend expects
-                        doc["extracted_data"] = [{
-                            "marker": item["marker_name"],
-                            "value": item["value"],
-                            "unit": item["unit"],
-                            "reference_range": item["reference_range"]
-                        } for item in markers_result.data]
-                        logger.info(f"Found {len(doc['extracted_data'])} markers for document {document_id}")
-            
-            return doc
-            
-        except Exception as e:
-            logger.error(f"Error retrieving analysis for {document_id}: {e}", exc_info=True)
+        """
+        Retrieves the complete analysis for a given document ID, composing data
+        from multiple tables into a single, frontend-ready object.
+        """
+        logger.info(f"Retrieving analysis for document {document_id}")
+        doc_response = self.supabase.table("documents").select("*").eq("id", document_id).maybe_single().execute()
+        
+        if not doc_response.data:
             return None
-    
+        
+        doc = doc_response.data
+        
+        # Base structure from the main document record.
+        analysis_payload = {
+            "document_id": doc.get("id"),
+            "status": doc.get("status"),
+            "filename": doc.get("filename"),
+            "uploaded_at": doc.get("upload_date"),
+            "raw_text": doc.get("raw_text"),
+            "error_message": doc.get("error_message"),
+            "processed_at": doc.get("processed_at"),
+            "progress": doc.get("progress"),
+            "processing_stage": doc.get("processing_stage"),
+            "ai_insights": None,
+            "extracted_data": []
+        }
+
+        # If processing is complete, fetch and integrate the analysis results.
+        if analysis_payload["status"] == "complete":
+            analysis_result_response = self.supabase.table("analysis_results").select("structured_data, insights").eq("document_id", document_id).maybe_single().execute()
+            if analysis_result_response.data:
+                ar = analysis_result_response.data
+                analysis_payload["ai_insights"] = ar.get("insights")
+                
+                # The structured_data field contains the full HealthInsights object as JSON.
+                # We parse it to populate the extracted_data.
+                structured_data = ar.get("structured_data", {})
+                if structured_data and 'data' in structured_data and 'markers' in structured_data['data']:
+                    analysis_payload["extracted_data"] = structured_data['data']['markers']
+
+        return analysis_payload
+        
     async def delete_document(self, document_id: str) -> bool:
-        """Delete a document and all its associated data from Supabase"""
-        try:
-            # 1. Load document data first to get storage path
-            document_data = self._load_document_data(document_id)
-            if not document_data:
-                logger.warning(f"Document {document_id} not found for deletion")
+        """
+        Deletes a document from storage and its associated records from the database.
+        The database schema is configured with `ON DELETE CASCADE` to automatically
+        remove dependent records in `analysis_results`.
+        """
+        logger.info(f"Attempting to delete document {document_id}")
+        
+        # Retrieve the storage path before deleting the database record.
+        doc_res = self.supabase.table("documents").select("storage_path").eq("id", document_id).maybe_single().execute()
+        
+        # Delete the primary document record. The CASCADE constraint handles the rest.
+        delete_res = self.supabase.table("documents").delete().eq("id", document_id).execute()
+        
+        if not delete_res.data:
+            logger.warning(f"Document {document_id} not found in DB for deletion, but proceeding to check storage.")
+            # Even if DB record is gone, try to clean up storage if we have the path.
+            if doc_res.data and doc_res.data.get("storage_path"):
+                 pass # fall through to storage deletion
+            else:
                 return False
 
-            storage_path = document_data.get("storage_path")
-
-            # 2. Get analysis_result ID to delete related health markers  
-            analysis_result = self.supabase.table("analysis_results").select("id").eq("document_id", document_id).maybe_single().execute()
-            if analysis_result.data:
-                analysis_id = analysis_result.data["id"]
-                
-                # Delete health markers first (foreign key constraint)
-                self.supabase.table("health_markers").delete().eq("analysis_id", analysis_id).execute()
-                logger.info(f"Deleted health markers for analysis {analysis_id}")
-                
-                # Delete analysis result
-                self.supabase.table("analysis_results").delete().eq("id", analysis_id).execute()
-                logger.info(f"Deleted analysis result {analysis_id}")
-
-            # 3. Delete file from storage
-            if storage_path:
-                try:
-                    self.supabase.storage.from_(self.bucket_name).remove([storage_path])
-                    logger.info(f"Deleted file from storage: {storage_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to delete file from storage {storage_path}: {e}")
-                    # Continue with database deletion even if storage deletion fails
-
-            # 4. Delete document record (should be last due to foreign key constraints)
-            self.supabase.table("documents").delete().eq("id", document_id).execute()
-            logger.info(f"Deleted document record {document_id}")
-
-            return True
-
-        except Exception as e:
-            logger.error(f"Error deleting document {document_id}: {e}", exc_info=True)
-            return False
+        # If the database record was found and deleted, proceed to delete the file from storage.
+        if doc_res.data and (storage_path := doc_res.data.get("storage_path")):
+            try:
+                self.supabase.storage.from_(self.bucket_name).remove([storage_path])
+                logger.info(f"Successfully deleted file from storage: {storage_path}")
+            except Exception as e:
+                # Log the error but return True, as the primary records are gone.
+                logger.error(f"DB records for {document_id} were deleted, but storage cleanup failed: {e}")
+        
+        logger.info(f"Successfully deleted document {document_id} and associated data.")
+        return True
     
     async def list_documents(self) -> List[Dict]:
-        """List all documents from Supabase"""
-        try:
-            result = self.supabase.table("documents").select("id, filename, upload_date, status, processed_at, public_url").order("upload_date", desc=True).execute()
-            documents = result.data if result.data else []
-            
-            # Ensure dates are properly formatted as ISO strings for frontend
-            for doc in documents:
-                if 'upload_date' in doc and doc['upload_date']:
-                    # Convert to ISO format string if it's not already
-                    if isinstance(doc['upload_date'], datetime):
-                        # Rename the field to match what frontend expects
-                        doc['uploaded_at'] = doc['upload_date'].isoformat()
-                        del doc['upload_date']  # Remove the old field
-                    else:
-                        doc['uploaded_at'] = doc['upload_date']
-                        del doc['upload_date']
-                if 'processed_at' in doc and doc['processed_at']:
-                    if isinstance(doc['processed_at'], datetime):
-                        doc['processed_at'] = doc['processed_at'].isoformat()
-                        
-            return documents
-        except Exception as e:
-            logger.error(f"Error listing documents from Supabase: {e}")
-            return []
-    
-    def _save_document_data(self, document_id: str, data: Dict):
-        """Save/Update document analysis data to Supabase"""
-        try:
-            logger.info(f"--- SAVING/UPDATING DATA FOR {document_id} ---")
-            logger.info(f"DATA RECEIVED: {data}")
-
-            # 1. Always update the main document table
-            doc_payload = {
-                "status": data["status"],
-                "error_message": data.get("error_message"),
-                "progress": data.get("progress"),
-                "processing_stage": data.get("processing_stage")
-            }
-
-            # Include raw_text if provided (during OCR stage)
-            if "raw_text" in data:
-                doc_payload["raw_text"] = data.get("raw_text")
-
-            if data["status"] == "complete":
-                doc_payload["processed_at"] = datetime.now().isoformat()
-
-            logger.info(f"UPDATING 'documents' with payload: {doc_payload}")
-            self.supabase.table("documents").update(doc_payload).eq("id", document_id).execute()
-
-            # 2. If processing is complete, save the analysis results
-            if data["status"] == "complete" and "analysis" in data:
-                logger.info("Status is 'complete', processing analysis results.")
-                analysis_payload = {
-                    "document_id": document_id,
-                    "structured_data": data["analysis"],
-                    "insights": self._format_insights_as_markdown(HealthInsights(**data["analysis"]))
-                }
-                
-                # Upsert analysis results
-                logger.info(f"UPSERTING 'analysis_results' with payload: {analysis_payload}")
-                analysis_result = self.supabase.table("analysis_results").upsert(analysis_payload, on_conflict="document_id").execute()
-                logger.info(f"UPSERT result: {analysis_result.data}")
-                analysis_id = analysis_result.data[0]['id']
-
-                # 3. Save health markers
-                if "data" in data["analysis"] and "markers" in data["analysis"]["data"] and data["analysis"]["data"]["markers"]:
-                    logger.info("Processing health markers.")
-                    markers_payload = [
-                        {
-                            "analysis_id": analysis_id,
-                            "marker_name": marker.get("marker"),
-                            "value": marker.get("value"),
-                            "unit": marker.get("unit"),
-                            "reference_range": marker.get("reference_range"),
-                        } for marker in data["analysis"]["data"]["markers"]
-                    ]
-                    # Clear old markers before inserting new ones to prevent duplicates
-                    logger.info(f"DELETING old markers for analysis_id: {analysis_id}")
-                    self.supabase.table("health_markers").delete().eq("analysis_id", analysis_id).execute()
-                    logger.info(f"INSERTING new markers: {markers_payload}")
-                    self.supabase.table("health_markers").insert(markers_payload).execute()
-                else:
-                    logger.info("No markers found in analysis data.")
-            else:
-                logger.info("Status is not 'complete' or no analysis data, skipping analysis save.")
-
-        except Exception as e:
-            logger.error(f"Error saving document data for {document_id} to Supabase: {e}", exc_info=True)
-            # Try to set the status to error one last time
-            self.supabase.table("documents").update({"status": "error", "error_message": str(e)}).eq("id", document_id).execute()
-            raise
-
-    def _load_document_data(self, document_id: str) -> Optional[Dict]:
-        """Load document data from Supabase"""
-        try:
-            # Fetch the document from Supabase
-            result = self.supabase.table("documents").select("*").eq("id", document_id).maybe_single().execute()
-            if not result.data:
-                return None
-            
-            doc = result.data
-
-            # Fetch analysis results and markers if document processing is complete
-            if doc["status"] == "complete":
-                analysis_result = self.supabase.table("analysis_results").select("*").eq("document_id", document_id).maybe_single().execute()
-                if analysis_result.data:
-                    doc["analysis"] = analysis_result.data
-                    # The markers are nested, let's format them as expected by the frontend
-                    doc["extracted_data"] = analysis_result.data.get("health_markers", [])
-
-                    markers_result = self.supabase.table("health_markers").select("*").eq("analysis_id", analysis_result.data['id']).execute()
-                    if markers_result.data:
-                        doc["analysis"]["markers"] = markers_result.data
-
-            return doc
-
-        except Exception as e:
-            logger.error(f"Error loading document data for {document_id} from Supabase: {e}", exc_info=True)
-            return None
+        """Lists all documents with key metadata, formatted for the frontend."""
+        result = self.supabase.table("documents").select(
+            "id, filename, upload_date, status, processed_at, public_url, progress, processing_stage"
+        ).order("upload_date", desc=True).execute()
+        
+        documents = result.data or []
+        # Frontend expects 'uploaded_at', so we rename the field for consistency.
+        for doc in documents:
+            doc['uploaded_at'] = doc.pop('upload_date', None)
+        return documents

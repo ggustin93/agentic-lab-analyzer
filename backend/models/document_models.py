@@ -1,15 +1,25 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from pydantic import BaseModel, ConfigDict, Field
+from typing import List, Optional, Dict, Any
 from enum import Enum
 from uuid import UUID, uuid4
 from datetime import datetime
 
 # Database Schema Models
-class Document(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
+class DocumentBase(BaseModel):
+    # Common base for document models
+    pass
+
+class DocumentCreate(DocumentBase):
+    # Model for creating a document, likely empty if details are in the file
+    pass
+
+class Document(DocumentBase):
+    id: int
     filename: str
     upload_date: datetime = Field(default_factory=datetime.now)
     status: str
+    progress: int
+    progress_stage: str
     user_id: Optional[UUID] = None
     storage_path: Optional[str] = None
     public_url: Optional[str] = None
@@ -17,8 +27,22 @@ class Document(BaseModel):
     error_message: Optional[str] = None
     processed_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentUpdate(BaseModel):
+    status: Optional[str] = None
+    progress: Optional[int] = None
+    progress_stage: Optional[str] = None
+    analysis_results: Optional[Dict[str, Any]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentWithAnalysis(Document):
+    analysis_results: Optional[Dict[str, Any]] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 class AnalysisResult(BaseModel):
     id: UUID = Field(default_factory=uuid4)

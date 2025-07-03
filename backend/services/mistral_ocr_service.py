@@ -9,6 +9,7 @@ import logging
 import magic
 import requests
 from typing import Dict, Any
+import asyncio
 
 from config.settings import settings
 
@@ -35,7 +36,7 @@ class MistralOCRService:
         """Check if Mistral OCR service is available."""
         return bool(self.api_key)
 
-    def extract_text(self, file_url: str) -> str:
+    async def extract_text(self, file_url: str, file_type: str) -> str:
         """
         Extracts text from a given file URL (image or PDF) using Mistral's OCR API.
         """
@@ -47,7 +48,8 @@ class MistralOCRService:
 
         try:
             # Download the file content from the URL
-            response = requests.get(file_url, timeout=30)
+            loop = asyncio.get_running_loop()
+            response = await loop.run_in_executor(None, lambda: requests.get(file_url, timeout=30))
             response.raise_for_status()
             content = response.content
             
@@ -71,7 +73,10 @@ class MistralOCRService:
                 "include_image_base64": False
             }
 
-            response = requests.post(self.api_url, headers=self.headers, json=payload, timeout=120)
+            response = await loop.run_in_executor(
+                None, 
+                lambda: requests.post(self.api_url, headers=self.headers, json=payload, timeout=120)
+            )
             response.raise_for_status()
 
             ocr_result = response.json()

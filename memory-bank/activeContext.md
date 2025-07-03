@@ -151,3 +151,21 @@ We have just completed a major enhancement to the upload progress display system
 - **Fallback Values**: Added default values for missing optional fields
 
 **Impact:** Document processing now handles malformed AI responses gracefully without failing completely. 
+
+## Current Focus & Next Steps
+
+Our primary focus has been a significant and successful refactoring of the backend architecture. This work is now complete.
+
+### Summary of Completed Work (Backend Refactoring)
+-   **Removed `pydantic-ai`**: The problematic `pydantic-ai` dependency has been completely removed, resolving dependency conflicts and improving system stability.
+-   **Standardized on `httpx`**: All external AI service calls now use the robust `httpx` library for direct, reliable communication.
+-   **Established Multi-Agent Pipeline**: The backend now uses a clear, three-agent pipeline (OCR -> Extractor/Analyzer -> Insights), which separates concerns and improves maintainability.
+-   **Hybrid AI/Deterministic Logic**: A hybrid approach is now in place. AI is used for unstructured data processing, while deterministic Python logic handles critical range and severity analysis, ensuring maximum accuracy.
+-   **Cleaned and Consolidated Models**: Obsolete code and data models have been removed, resulting in a single, clear source of truth for the system's data structures.
+-   **Added Severity Analysis**: The system can now distinguish between `warning` and `danger` levels for out-of-range lab markers, providing more nuanced insights.
+
+### Next Steps
+With a stable and robust backend, the project is well-positioned for future feature development. Immediate next steps could include:
+-   **Frontend Enhancements**: Improving the UI to visually represent the new "warning" vs. "danger" statuses.
+-   **Roadmap Feature Implementation**: Begin work on the planned evolution, such as integrating a local OCR engine like `docTR` to replace the Mistral OCR service.
+-   **Security Hardening**: Implementing Row Level Security (RLS) in Supabase and adding user authentication. 

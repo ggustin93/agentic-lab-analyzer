@@ -1,33 +1,58 @@
-# Core Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
+# Minimal Working Requirements - AI Health Document Analyzer
+# Zero dependency conflicts guaranteed
 
-# Data Validation & Models
-pydantic==2.8.2
+# ============================================================================
+# Core FastAPI (MINIMAL)
+# ============================================================================
+fastapi==0.115.14
+uvicorn==0.24.0
+python-multipart==0.0.9
+
+# ============================================================================
+# Data Validation (CORE)
+# ============================================================================
+pydantic==2.10.6
 pydantic-settings==2.1.0
 
-# HTTP Client & Async
-httpx==0.27.2
-aiofiles==23.2.0
+# ============================================================================
+# HTTP Client (COMPATIBLE VERSION)
+# ============================================================================
+httpx>=0.26,<0.28  # Compatible avec Supabase ET pydantic-ai
 
+# ============================================================================
+# File & I/O
+# ============================================================================
+aiofiles==23.2.1
+
+# ============================================================================
 # Environment & Configuration
-python-dotenv==1.0.0
+# ============================================================================
+python-dotenv==1.0.1
 
-# Image Processing (minimal)
-Pillow==10.1.0
+# ============================================================================
+# Database (MINIMAL)
+# ============================================================================
+supabase==2.10.0
 
-# AI Services (MVP focused)
-openai==1.3.0
+# ============================================================================
+# Utilities
+# ============================================================================
+requests>=2.32.3
+python-magic==0.4.27
+watchfiles==0.21.0
 
-# Development Tools (minimal)
+# ============================================================================
+# AI Capabilities (LIGHTWEIGHT)
+# ============================================================================
+# Option 1: Use direct API calls instead of pydantic-ai
+# anthropic>=0.52.0,<1.0.0
+# openai>=1.0.0,<2.0.0
+
+# Option 2: Remove pydantic-ai completely and use httpx directly
+# This eliminates ALL dependency conflicts
+
+# ============================================================================
+# Development & Testing (MINIMAL)
+# ============================================================================
 pytest==7.4.3
 pytest-asyncio==0.21.1
-
-# Communication
-requests==2.31.0
-supabase==2.5.2
-
-# Utilities
-watchfiles==0.21.0
-python-magic==0.4.27

@@ -1,85 +1,56 @@
-# System Patterns: Lab Insight Engine
+# System Design & Architectural Patterns
 
-## 1. Backend Architecture
+This document outlines the high-level architecture and key design patterns for the Lab Insight Engine.
 
-- **Agent-Based Design:** The backend uses a protocol-based (interface) design for its AI agents (`chutes_ai_agent.py`, `mistral_ocr_service.py`). This is a key pattern for maintainability, allowing different agent implementations to be swapped without changing the core business logic in the `DocumentProcessor`.
-- **Decoupled Orchestration:** The `DocumentProcessor` service acts as an orchestrator, coordinating the workflow (OCR, analysis, data persistence) but remaining decoupled from the specific AI services that perform the work.
-- **Secure Configuration:** Pydantic's `Settings` model is used to manage all secrets and configuration from environment variables, ensuring no sensitive data is exposed in the codebase.
-- **Layered API:** The FastAPI application exposes a versioned RESTful API (`/api/v1/...`) for clear separation and future scalability.
+## 1. System Architecture
 
-## 2. Frontend Architecture
+The system is a decoupled, full-stack application composed of an Angular frontend, a FastAPI backend, and the Supabase platform for persistence.
 
-- **Smart Service/Presentational Component:** The frontend follows a pattern where "smart" services (`DocumentAnalysisService`) contain the business logic, state management, and API interactions. "Presentational" components (`data-table`, `document-list`) are responsible only for displaying data and emitting user events, making them highly reusable and testable.
-- **RxJS for State Management:** A centralized, RxJS-based service (`DocumentAnalysisService`) manages the application's state. This provides a reactive data flow that is efficient and scales well for this project's scope without requiring a larger state management library like NgRx or Redux.
-- **OnPush Change Detection:** Components are configured with `OnPush` change detection strategy to optimize performance by reducing Angular's rendering cycles. **Enhanced with OnChanges lifecycle hooks for precise progress tracking and debugging.**
-- **Lazy Loading:** Feature modules, particularly the `analysis` page, are lazy-loaded to minimize the initial bundle size and improve the First Contentful Paint (FCP) time.
+```mermaid
+graph TD
+    subgraph Frontend
+        A[Angular 19 UI]
+    end
 
-## 3. Progress Tracking System
+    subgraph "Backend (Agentic Pipeline)"
+        B[FastAPI Server]
+        C[DocumentProcessor Orchestrator]
+        D[Agent 1: MistralOCRService]
+        E[Agent 2: LabDataExtractorAgent]
+        F[Agent 3: ClinicalInsightAgent]
+    end
 
-**NEW: Stage-Based Visual Feedback Pattern**
-- **4-Stage Pipeline:** Consistent progress stages across the entire application (OCR Extraction → AI Analysis → Saving Results → Complete)
-- **Color-Coded Theming:** Each stage has a distinct color theme (yellow → blue → purple → green) applied consistently across all UI components
-- **Reactive Progress Updates:** Uses Angular's OnChanges and ChangeDetectorRef for precise progress tracking without unnecessary re-renders
-- **SSE Progress Enhancement:** Backend `document_processor.py` includes progress percentage and stage information in Server-Sent Events for real-time updates
-- **Visual State Synchronization:** Progress bars, spinners, icons, and stage indicators all update synchronously based on the same data source
-- **Comprehensive Logging:** Detailed console logging at each progress update for debugging and monitoring
+    subgraph Platform
+        G[Supabase Storage & DB]
+    end
 
-## 4. Reference Range Handling System
-
-**Pattern:** Pure OCR-first system with complete separation between extracted data display and medical reference information.
-
-**Implementation:**
-- **OCR Layer (Chutes AI Agent):** Enhanced prompts with specific guidance for extracting reference ranges from documents
-- **Validation Layer (lab-marker-info.service.ts):** Conservative detection of extraction failures using `isReferenceRangeIncomplete()`
-- **Display Layer (data-table.component.ts):** `getDisplayReferenceRange()` shows ONLY OCR-extracted data - never fallback ranges
-- **Comparison Layer (data-table.component.ts):** `getComparisonReferenceRange()` ONLY uses OCR data for highlighting
-- **Tooltip Layer (data-table.component.ts):** Medical standard ranges available only in tooltips for reference
-- **Fallback Layer (lab-marker-info.service.ts):** Medical standard ranges never contaminate table display
-
-**Key Principles:** 
-- **Data Purity**: Extracted data table contains ONLY what was actually detected by OCR from documents
-- **Zero Contamination**: No fallback data mixed into displayed results under any circumstances  
-- **Separation of Concerns**: Medical references available separately in tooltips, never in main data display
-- **User Trust**: Users see exactly what the system detected, with no added or modified information
-
-**Visual Indicators:** 
-- No "STANDARD" badges in table (removed)
-- Empty reference range cells when OCR extraction failed (honest representation)
-- Medical standard ranges available in tooltips for context only
-
-## 5. DevOps
-
-- **Containerization:** The entire application stack (frontend, backend) is containerized using Docker and managed with Docker Compose. This ensures a consistent, reproducible development and deployment environment for any developer.
-- **CI/CD Pipeline:** A GitHub Actions workflow automates linting and testing for both frontend and backend on every push, enforcing code quality and preventing regressions.
-
-## 6. Database Schema Management
-
-### **Migration System Architecture**
-- **Version-controlled migrations** stored in `supabase/migrations/` with semantic naming
-- **Naming convention**: `YYYYMMDD_NNN_description.sql` for chronological ordering
-- **Rollback scripts** (`_rollback.sql` suffix) for safe schema reversions
-- **Baseline documentation** capturing original schema state
-
-### **Migration Structure**
-```
-supabase/
-├── migrations/           # Schema changes with rollbacks
-│   ├── README.md        # Migration guidelines
-│   ├── 20250101_000_baseline_schema.sql
-│   └── 20250102_001_add_progress_tracking_columns.sql
-├── seeds/               # Initial/test data
-└── types/               # TypeScript definitions
+    A -- "Upload (HTTPS)" --> B
+    B -- "Triggers" --> C
+    C -- "Manages" --> D
+    D -- "Raw Text" --> C
+    C -- "Raw Text" --> E
+    E -- "Analyzed Data" --> C
+    C -- "Analyzed Data" --> F
+    F -- "Final Insights" --> C
+    C -- "Stores Results" --> G
+    A -- "Streams Status (SSE)" --> B
 ```
 
-### **Current Schema Evolution**
-1. **Baseline Schema** (20250101_000) - Core tables: documents, analysis_results, health_markers
-2. **Progress Tracking** (20250102_001) - Added `progress` and `processing_stage` columns
+## 2. Core Backend Patterns
 
-### **Application Methods**
-- **Supabase MCP** for automated, safe application via agent
-- **Manual SQL Editor** for direct database access
-- **Supabase CLI** for local development workflows
-- **Safety features**: IF EXISTS/NOT EXISTS, proper indexes, documentation
+### Multi-Agent Pipeline
+The backend's core is a pipeline of specialized, independent agents.
+-   **Separation of Concerns**: Each agent has a single responsibility (OCR, data extraction, insight generation), which enhances modularity and simplifies maintenance.
+-   **Orchestration**: A `DocumentProcessor` class orchestrates the data flow between agents, but is decoupled from their specific implementations, enabling future modularity.
+-   **Pipeline Stages**:
+    1.  `MistralOCRService`: Performs OCR, returning raw text.
+    2.  `LabDataExtractorAgent`: Extracts structured data from the text using an LLM, then analyzes this data using deterministic Python logic to assign a severity status.
+    3.  `ClinicalInsightAgent`: Synthesizes the structured, analyzed data into human-readable insights using an LLM.
 
-- **File Structure:** Individual task files in `tasks/` for detailed implementation tracking and documentation
-- **Tag System:** Context-aware task organization supporting feature branches, experiments, and collaborative development 
+### Hybrid AI & Deterministic Logic
+A hybrid approach ensures both intelligence and reliability.
+-   **AI for Unstructured Tasks**: LLMs are leveraged for their strength in parsing and interpreting unstructured text.
+-   **Python for Deterministic Logic**: Critical analysis, such as comparing a lab value to its reference range, is performed in pure Python to guarantee accuracy and eliminate the risk of AI-induced errors.
+
+### Interface-Based Design
+The system uses Python's `Protocol` to define contracts (interfaces) for its agents. The orchestrator depends on these protocols, not on concrete classes. This application of the Dependency Inversion Principle is fundamental to the system's flexibility and extensibility.

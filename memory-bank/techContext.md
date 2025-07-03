@@ -112,14 +112,14 @@ constructor() {
 
 ## 2. Backend
 
-- **Framework:** FastAPI (Python)
-- **Data Persistence:** Supabase (PostgreSQL)
-- **AI/OCR Services:**
-    - Mistral for OCR and data extraction.
-    - Chute AI for generating insights (or another similar LLM).
-- **Configuration:** Pydantic
-- **Real-time Updates:** **Enhanced SSE implementation with progress tracking and stage information included in document processing responses**
-- **Testing:** pytest
+- **Framework**: FastAPI
+- **Language**: Python 3.11
+- **Key Libraries**:
+  - `Pydantic`: For data validation and settings management.
+  - `httpx`: For asynchronous API calls to external AI services.
+  - `uvicorn`: High-performance ASGI server for FastAPI.
+  - `python-multipart`: For handling file uploads.
+  - `Supabase`: Python client for interacting with the Supabase backend.
 
 ## 3. Development Environment
 

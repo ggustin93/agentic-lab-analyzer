@@ -8,41 +8,53 @@ A modern, agent-based platform for analyzing medical lab documents with AI-power
 
 ## 🚀 Key Features
 
-- **Intelligent Document Processing**: Upload lab reports (PDF, PNG, JPG) and receive structured data extraction with AI-powered insights
-- **Agent-Based Architecture**: Modular system with specialized AI agents for OCR and lab data analysis
-- **Real-Time Processing**: Monitor document processing status via Server-Sent Events (SSE)
-- **Persistent Storage**: Automatic saving of documents and analysis results for future reference
-- **Responsive UI**: Clean, modern interface built with Angular 19 and Tailwind CSS
+- **Intelligent Document Processing**: Upload lab reports (PDF, PNG, JPG) and receive structured data extraction with AI-powered insights.
+- **Multi-Agent Architecture**: A robust pipeline with specialized agents for OCR, data extraction, and clinical analysis, ensuring accuracy and maintainability.
+- **Reliable, Structured Analysis**: A deterministic analysis layer written in pure Python guarantees accurate range-checking for lab values.
+- **Real-Time Processing**: Monitor document processing status via Server-Sent Events (SSE).
+- **Persistent Storage**: Automatic saving of documents and analysis results for future reference.
+- **Responsive UI**: Clean, modern interface built with Angular 19 and Tailwind CSS.
 
 ## 🏗️ Architecture
 
-The system employs a decoupled architecture with three main components:
+The system employs a decoupled, multi-agent architecture:
 
-```
-┌───────────────────────┐      ┌───────────────────────────┐      ┌─────────────────────────┐
-│   Angular 19 Frontend │      │      FastAPI Backend      │      │     Supabase Platform     │
-│ (OnPush, Async Pipe)  ├─────►│      (Agent-Based)        ├─────►│  (Postgres & Storage)   │
-├───────────────────────┤      ├───────────────────────────┤      ├─────────────────────────┤
-│ - Document Upload     │      │  POST /api/v1/docs/upload │      │ - User Documents        │
-│ - Real-Time View      │◄─────┤───────────────────────────┤      │ - Analysis Results      │
-│   (via EventSource)   │      │  GET  /api/v1/docs/:id/stream (SSE) │      │ - File Storage Bucket   │
-└───────────────────────┘      ├───────────────────────────┤      └─────────────────────────┘
-                               │      DocumentProcessor    │
-                               │     (Orchestrator)        │
-                               ├─────────────┬─────────────┤
-                               │             │             │
-                               ▼             ▼             │
-                     ┌───────────┐   ┌───────────┐
-                     │ OCRExtractor│   │ LabInsight  │
-                     │ Agent       │   │ Agent       │
-                     └───────────┘   └───────────┘
+```mermaid
+graph TD
+    subgraph Frontend
+        A[Angular 19 UI]
+    end
+
+    subgraph Backend
+        B[FastAPI Server]
+        C[DocumentProcessor Orchestrator]
+        D[Agent 1: MistralOCRService]
+        E[Agent 2: LabDataExtractorAgent]
+        F[Agent 3: ClinicalInsightAgent]
+    end
+
+    subgraph Platform
+        G[Supabase Storage & DB]
+    end
+
+    A -- Uploads --> B
+    B -- Triggers --> C
+    C -- Manages --> D
+    D -- text --> C
+    C -- text --> E
+    E -- analyzed_data --> C
+    C -- analyzed_data --> F
+    F -- final_insights --> C
+    C -- Stores in --> G
+    A -- Streams status from --> B
 ```
 
 ### Backend Design Patterns
 
-- **Protocol-Based Agents**: OCR and analysis services implement common interfaces for easy swapping
-- **Orchestrator Pattern**: `DocumentProcessor` coordinates workflow while remaining decoupled from specific implementations
-- **Secure Configuration**: Environment-based secrets management with Pydantic
+- **Multi-Agent Pipeline**: Specialized agents handle distinct tasks (OCR, Extraction, Insights) for improved robustness and maintainability.
+- **Orchestrator Pattern**: `DocumentProcessor` coordinates the agent workflow while remaining decoupled from specific implementations.
+- **Hybrid AI & Deterministic Logic**: Uses AI for complex, unstructured tasks (like text extraction) and pure Python for critical, deterministic tasks (like range checking) to ensure accuracy.
+- **Secure Configuration**: Environment-based secrets management with Pydantic.
 - **Versioned API**: Clear `/api/v1/` structure for future extensibility
 
 ### Frontend Design Patterns
@@ -66,7 +78,7 @@ The system employs a decoupled architecture with three main components:
 - **Frontend**: Angular 19, TypeScript, RxJS, Tailwind CSS
 - **Backend**: Python 3.11, FastAPI, Pydantic
 - **Database & Storage**: Supabase (PostgreSQL)
-- **AI Services**: Mistral AI (OCR), Chutes.AI (Analysis)
+- **AI Services**: Mistral AI (OCR), Chutes.AI (Extraction & Analysis)
 - **DevOps**: Docker, Docker Compose, GitHub Actions
 
 ## ⚠️ Security Notice: MVP Configuration
