@@ -13,7 +13,6 @@
  * - Type-safe file validation
  * - Expert-level error handling and logging
  * 
- * @author Angular Expert Team
  * @version 2.0.0 - Angular 19 Modernization
  */
 
