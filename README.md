@@ -1,8 +1,11 @@
-# Lab Insight Engine
+# DocBot AI: Health Document Analyzer
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/ggustin93/agentic-lab-analyzer)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](docker-compose.yml)
+[![CI Status](https://github.com/ggustin93/agentic-lab-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/ggustin93/agentic-lab-analyzer/actions/workflows/ci.yml)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](docker-compose.yml)
+[![Angular](https://img.shields.io/badge/Angular-v19-DD0031?logo=angular)](https://angular.io)
+[![Python](https://img.shields.io/badge/Python-v3.11-3776AB?logo=python)](https://www.python.org)
 
 An AI-powered platform for analyzing medical lab documents, built to demonstrate modern full-stack development practices. This application provides document upload, OCR processing, intelligent analysis, and structured results through a responsive Angular frontend.
 
@@ -65,19 +68,55 @@ The system employs a decoupled, containerized architecture with three main compo
 └── README.md                 # You are here!
 ```
 
-### Backend Design Patterns
+Understood. The goal is to be technically precise and professional, but with a neutral, objective tone that lets the work speak for itself. This version strips away any enthusiastic or overly descriptive language and presents the design patterns as clean, factual architectural decisions.
 
-- **Protocol-Based Agents**: OCR and analysis services implement common interfaces for easy swapping
-- **Orchestrator Pattern**: `DocumentProcessor` coordinates workflow while remaining decoupled from specific implementations
-- **Secure Configuration**: Environment-based secrets management with Pydantic
-- **Versioned API**: Clear `/api/v1/` structure for future extensibility
+Here is the revised, more humble, concise, and professional version.
 
-### Frontend Design Patterns
+---
 
-- **Smart Service/Presentational Components**: Business logic in services, display logic in components
-- **RxJS State Management**: Reactive data flow without heavy state libraries
-- **OnPush Change Detection**: Optimized rendering cycles
-- **Lazy Loading**: Improved initial load performance
+## 🏗️ Architecture & Design Patterns
+
+The application is built on a set of established design patterns chosen for modularity, maintainability, and performance.
+
+### Backend Design
+
+Yes, you absolutely should mention FastAPI.
+
+For a technical audience, especially in a full-stack context, naming the specific backend framework is crucial. FastAPI is not just *any* Python framework; it's a marker of modern, high-performance development.
+
+Here's why mentioning it is a significant advantage:
+
+1.  **Signals Modernity and Performance:** FastAPI is known for being one of the fastest Python web frameworks available. Choosing it shows that you prioritize performance, which is a key concern for any senior engineer.
+2.  **Asynchronous by Default:** It's built on `asyncio` from the ground up. Mentioning it immediately communicates that you are comfortable with modern asynchronous programming in Python, a highly valued skill.
+3.  **Automatic API Documentation:** FastAPI automatically generates interactive API documentation (like Swagger UI). This demonstrates that you value good developer experience and clear API contracts, which is a very professional trait.
+4.  **Pydantic Integration:** It has deep, native integration with Pydantic. Since you're already using Pydantic, mentioning FastAPI shows that you've chosen a cohesive and logical tech stack where the parts work seamlessly together.
+
+### How to Integrate it Naturally
+
+You don't need a whole new section. The best way is to integrate it into the existing `Backend Design` section. Here is the revised section, now including FastAPI. The change is small but adds significant technical weight.
+
+---
+
+### **Revised `Backend Design` Section**
+
+### Backend Design
+
+The Python backend is built with **FastAPI** for its high performance and native asynchronous capabilities. This choice supports a scalable and responsive service, ideal for handling I/O-bound operations like calls to AI APIs. The architecture is guided by the following principles:
+
+-   **Orchestrator Pattern**: A central `DocumentProcessor` service coordinates the multi-step analysis workflow, delegating tasks to specialized agents.
+-   **Protocol-Based Agents**: AI services for OCR and analysis implement a common `Protocol` (interface). This allows different AI providers to be used interchangeably without altering the core business logic.
+-   **Type-Safe API with Pydantic**: FastAPI's native integration with **Pydantic** is used for robust, automatic request/response validation and to generate clear, interactive API documentation.
+-   **Secure Configuration**: All settings and secrets are managed through environment variables, loaded and validated by a Pydantic `BaseSettings` model at startup.
+
+
+### Frontend Design
+
+The Angular frontend is architected using modern patterns to ensure a performant and maintainable codebase.
+
+-   **Centralized State Management**: A single service, `DocumentAnalysisService`, manages the client-side state using **Angular Signals**. This provides a reactive and efficient way to update the UI.
+-   **Separation of Concerns**: The architecture separates "smart" services, which handle business logic and API calls, from "presentational" components, which are only responsible for displaying data.
+-   **Performance Optimization**: **`OnPush`** change detection is used globally to minimize rendering cycles. The application is built entirely with **Standalone Components** to improve modularity and support tree-shaking.
+-   **Scalability Path**: The routing is structured to support **lazy loading** for feature-heavy modules in future development, which is a standard practice for optimizing initial load times in larger applications.
 
 ## 🔄 Implementation Status
 
