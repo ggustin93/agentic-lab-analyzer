@@ -87,9 +87,18 @@ class ChutesAILabAgent(LabInsightAgent):
                 "document_type": "type",
                 "test_date": null
             },
-            "summary": "Brief summary",
-            "key_findings": ["finding1", "finding2"],
-            "recommendations": ["rec1", "rec2"],
+            "summary": "Brief summary of the test, highlighting any abnormal findings.",
+            "key_findings": [
+                "Each item in this list should describe an abnormal marker (i.e., a marker where the value is outside the reference range).",
+                "Use medical terminology and mention the marker name, the abnormal value, and whether it is high or low relative to the reference range.",
+                "Example: 'Elevated ALT (56 U/L) above reference range suggests possible hepatocellular injury.'"
+            ],
+            "recommendations": [
+                "Each recommendation must directly respond to one or more abnormal markers from key_findings.",
+                "Give expert-level suggestions, including possible causes, next diagnostic steps, or lifestyle/clinical interventions.",
+                "Avoid vague advice. Be specific, medically sound, and actionable.",
+                "Example: 'Recommend liver ultrasound and hepatitis panel to investigate elevated ALT.'"
+            ],
             "disclaimer": "This analysis is for educational purposes only. It is not a substitute for professional medical advice. Always consult a qualified healthcare provider."
         }
 
@@ -97,29 +106,29 @@ class ChutesAILabAgent(LabInsightAgent):
         When analyzing lab reports with multiple columns, carefully distinguish between:
 
         1. REFERENCE RANGES ("Normes" / "Normal" / "Reference"):
-           - These are the CURRENT medical standard ranges for each test
-           - Usually appear as ranges like "13.0 - 17.5", "< 100", "> 40", "Normal: 65-100"
-           - Extract EXACTLY as they appear in the document
-           - Use these for the "reference_range" field
+        - These are the CURRENT medical standard ranges for each test
+        - Usually appear as ranges like "13.0 - 17.5", "< 100", "> 40", "Normal: 65-100"
+        - Extract EXACTLY as they appear in the document
+        - Use these for the "reference_range" field
 
         2. PREVIOUS RESULTS ("Résultats Antérieurs" / "Previous Results"):
-           - These are HISTORICAL test values from past dates
-           - Often include dates like "17/05/2021" or specific values from previous tests
-           - DO NOT use these as reference ranges
-           - These are patient's own historical data, not medical standards
+        - These are HISTORICAL test values from past dates
+        - Often include dates like "17/05/2021" or specific values from previous tests
+        - DO NOT use these as reference ranges
+        - These are patient's own historical data, not medical standards
 
         3. CURRENT VALUES ("Résultats" / "Results"):
-           - These are the CURRENT test results being analyzed
-           - Use these for the "value" field
+        - These are the CURRENT test results being analyzed
+        - Use these for the "value" field
 
         EXAMPLES OF CORRECT EXTRACTION:
         - If you see: "Hémoglobine | 16.1 | g/dL | 13.0 - 17.5 | 16.3"
-          Extract: {"marker": "Hémoglobine", "value": "16.1", "unit": "g/dL", "reference_range": "13.0 - 17.5"}
-          NOT: {"reference_range": "16.3"} (this is a previous result!)
+        Extract: {"marker": "Hémoglobine", "value": "16.1", "unit": "g/dL", "reference_range": "13.0 - 17.5"}
+        NOT: {"reference_range": "16.3"} (this is a previous result!)
 
         - If you see: "VGM | 91.9 | μm³ | 80.0 - 98.0 | 95.2"
-          Extract: {"marker": "VGM", "value": "91.9", "unit": "μm³", "reference_range": "80.0 - 98.0"}
-          NOT: {"reference_range": "95.2"} (this is a previous result!)
+        Extract: {"marker": "VGM", "value": "91.9", "unit": "μm³", "reference_range": "80.0 - 98.0"}
+        NOT: {"reference_range": "95.2"} (this is a previous result!)
 
         REFERENCE RANGE QUALITY REQUIREMENTS:
         - Preserve exact formatting from the document (including spaces, dashes, symbols)
@@ -127,7 +136,30 @@ class ChutesAILabAgent(LabInsightAgent):
         - If unclear or missing, return empty string for reference_range
         - Never guess or approximate ranges
         - Never use previous results as reference ranges
+
+        CRITICAL: CLEAN UP MALFORMED OCR PATTERNS:
+        When you encounter malformed reference ranges from OCR, clean them up:
+        
+        MALFORMED PATTERNS TO FIX:
+        - "<6 - 6.0" → Should be "<6.0" (upper bound only)
+        - "<2 - 2.0" → Should be "<2.0" (upper bound only)  
+        - "<0 - 0.50" → Should be "<0.50" (upper bound only)
+        - "<5 - 5.0" → Should be "<5.0" (upper bound only)
+        
+        CLEANING RULES:
+        1. If you see pattern like "<X - Y" where X ≤ Y, extract as "<Y" (use the higher value)
+        2. If you see pattern like ">X - Y" where X ≥ Y, extract as ">X" (use the higher value)
+        3. Remove redundant formatting: "< 6.0 - 6.0" → "<6.0"
+        4. Preserve proper ranges: "3.5 - 5.0" → Keep as "3.5 - 5.0" (this is correct)
+        
+        EXAMPLES OF PROPER CLEANING:
+        - OCR gives: "<6 - 6.0" → Extract: "<6.0"
+        - OCR gives: "<2 - 2.0" → Extract: "<2.0"
+        - OCR gives: "<0 - 0.50" → Extract: "<0.50"
+        - OCR gives: "3.5 - 5.0" → Extract: "3.5 - 5.0" (keep as-is, this is correct)
+        - OCR gives: "> 40 - 40" → Extract: ">40"
         """
+
 
         try:
             response = await self.client.post(

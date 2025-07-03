@@ -1,21 +1,28 @@
-import { Injectable, signal, computed, effect, inject } from '@angular/core';
+import { Injectable, signal, computed, effect, inject, OnDestroy } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { HealthDocument, DocumentStatus, UploadResponse, AnalysisResultResponse } from '../models/document.model';
 
+// Service configuration constants
+const CONFIG = {
+  API_BASE_URL: 'http://localhost:8000/api/v1',
+  SSE_RETRY_DELAY: 1000,
+  MAX_SSE_RETRIES: 3
+} as const;
+
 @Injectable({ providedIn: 'root' })
-export class DocumentAnalysisService {
-  private readonly API_BASE_URL = 'http://localhost:8000/api/v1';
+export class DocumentAnalysisService implements OnDestroy {
+  private readonly http = inject(HttpClient);
   
-  // 🚀 Modern Angular 19: Signals instead of BehaviorSubject
+  // State management with Angular 19 signals
   private documentsSignal = signal<HealthDocument[]>([]);
   public readonly documents = this.documentsSignal.asReadonly();
   
-  // 🚀 Modern Angular 19: inject() function instead of constructor injection
-  private http = inject(HttpClient);
+  // SSE connection tracking for cleanup
+  private activeConnections = new Map<string, EventSource>();
   
-  // 🚀 Computed signals for derived state
+  // Computed state selectors
   public readonly processingDocuments = computed(() => 
     this.documents().filter(doc => doc.status === DocumentStatus.PROCESSING)
   );
@@ -25,171 +32,49 @@ export class DocumentAnalysisService {
   );
   
   public readonly documentCount = computed(() => this.documents().length);
+  
+  public readonly hasProcessingDocuments = computed(() => 
+    this.processingDocuments().length > 0
+  );
 
   constructor() {
     this.loadInitialDocuments();
-    
-    // 🚀 Effect for debugging and side effects
-    effect(() => {
-      const docs = this.documents();
-      const processing = this.processingDocuments().length;
-      console.log(`📊 Documents state: ${docs.length} total, ${processing} processing`);
-    });
+    this.setupStateLogging();
   }
 
+  ngOnDestroy(): void {
+    this.closeAllConnections();
+  }
+
+  // === PUBLIC API ===
+
   loadInitialDocuments(): void {
-    this.http.get<HealthDocument[]>(`${this.API_BASE_URL}/documents`).pipe(
-      catchError(this.handleError)
-    ).subscribe(documents => {
-      this.documentsSignal.set(documents);
-    });
+    this.http.get<HealthDocument[]>(`${CONFIG.API_BASE_URL}/documents`)
+      .pipe(catchError(this.handleError))
+      .subscribe(documents => this.documentsSignal.set(documents));
   }
 
   uploadDocument(file: File): Observable<UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
 
-    return this.http.post<UploadResponse>(`${this.API_BASE_URL}/documents/upload`, formData).pipe(
+    return this.http.post<UploadResponse>(`${CONFIG.API_BASE_URL}/documents/upload`, formData).pipe(
       tap(response => {
-        // Use the current time in ISO format for the upload date
-        // The backend will update this with the correct value via SSE
-        const newDoc: HealthDocument = {
-          id: response.document_id,
-          filename: response.filename,
-          uploaded_at: new Date().toISOString(),
-          status: DocumentStatus.PROCESSING,
-        };
-        // 🚀 Signals: Update immutably
+        const newDoc = this.createPendingDocument(response);
         this.documentsSignal.update(docs => [newDoc, ...docs]);
-        this.streamDocumentStatus(response.document_id);
+        this.startDocumentStream(response.document_id);
       }),
       catchError(this.handleError)
     );
   }
 
-  private streamDocumentStatus(documentId: string): void {
-    const eventSource = new EventSource(`${this.API_BASE_URL}/documents/${documentId}/stream`);
-
-    eventSource.onmessage = (event) => {
-      const result: AnalysisResultResponse = JSON.parse(event.data);
-      console.log(`📡 SSE Update received for ${result.document_id}:`, {
-        progress: result.progress,
-        stage: result.processing_stage,
-        status: result.status
-      });
-      this.updateDocumentInState(result);
-      if (result.status === DocumentStatus.COMPLETE || result.status === DocumentStatus.ERROR) {
-        console.log(`✅ SSE Stream closed for ${result.document_id} - Final status: ${result.status}`);
-        eventSource.close();
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error('SSE Error:', error);
-      this.updateDocumentStatusToError(documentId, 'Connection to analysis stream failed.');
-      eventSource.close();
-    };
-  }
-
-  private updateDocumentInState(result: AnalysisResultResponse): void {
-    // 🚀 Signals: Immutable update pattern
-    this.documentsSignal.update(currentDocs => {
-      const index = currentDocs.findIndex(d => d.id === result.document_id);
-      if (index === -1) {
-        console.warn(`⚠️ Document ${result.document_id} not found in current state for update`);
-        return currentDocs;
-      }
-
-      const updatedDoc: HealthDocument = {
-        id: result.document_id,
-        filename: result.filename,
-        uploaded_at: result.uploaded_at,
-        status: result.status,
-        processed_at: result.processed_at,
-        raw_text: result.raw_text,
-        extracted_data: result.extracted_data?.map(d => ({
-          marker: d.marker,
-          value: d.value,
-          unit: d.unit,
-          reference_range: d.reference_range
-        })),
-        ai_insights: result.ai_insights,
-        error_message: result.error_message,
-        progress: result.progress,
-        processing_stage: result.processing_stage,
-      };
-      
-      const newDocs = [...currentDocs];
-      newDocs[index] = updatedDoc;
-      console.log(`🔄 State updated for ${result.document_id}: ${result.progress}% (${result.processing_stage})`);
-      return newDocs;
-    });
-  }
-
-  private updateDocumentStatusToError(documentId: string, errorMessage: string): void {
-    // 🚀 Signals: Immutable update for error handling
-    this.documentsSignal.update(currentDocs => {
-      const index = currentDocs.findIndex(d => d.id === documentId);
-      if (index === -1) return currentDocs;
-
-      const docToUpdate = currentDocs[index];
-      const updatedDoc: HealthDocument = {
-        ...docToUpdate,
-        status: DocumentStatus.ERROR,
-        error_message: errorMessage
-      };
-      
-      const newDocs = [...currentDocs];
-      newDocs[index] = updatedDoc;
-      return newDocs;
-    });
-  }
-
   getDocument(documentId: string): Observable<HealthDocument | null> {
-    console.log(`Getting document ${documentId}`);
-    
-    // Always fetch from API for analysis view to ensure fresh data
-    // This prevents stale data when navigating between different analyses
-    console.log(`Fetching document ${documentId} from API`);
-    return this.http.get<AnalysisResultResponse>(`${this.API_BASE_URL}/documents/${documentId}`).pipe(
-      tap(result => console.log(`API response for document ${documentId}:`, result)),
-      map(result => {
-        const document: HealthDocument = {
-          id: result.document_id,
-          filename: result.filename,
-          uploaded_at: result.uploaded_at,
-          status: result.status,
-          processed_at: result.processed_at,
-          raw_text: result.raw_text,
-          extracted_data: result.extracted_data?.map(d => ({
-            marker: d.marker,
-            value: d.value,
-            unit: d.unit,
-            reference_range: d.reference_range
-          })),
-          ai_insights: result.ai_insights,
-          error_message: result.error_message,
-          progress: result.progress,
-          processing_stage: result.processing_stage
-        };
-        
-        // Update the document in our state as well
-        this.updateDocumentInState({
-          document_id: document.id,
-          filename: document.filename,
-          uploaded_at: document.uploaded_at,
-          status: document.status,
-          processed_at: document.processed_at,
-          raw_text: document.raw_text,
-          extracted_data: document.extracted_data,
-          ai_insights: document.ai_insights,
-          error_message: document.error_message,
-          progress: document.progress,
-          processing_stage: document.processing_stage
-        });
-        
-        console.log(`Mapped document ${documentId}:`, document);
-        return document;
+    return this.http.get<AnalysisResultResponse>(`${CONFIG.API_BASE_URL}/documents/${documentId}`).pipe(
+      map(result => this.mapResponseToDocument(result)),
+      tap(document => {
+        if (document) {
+          this.updateDocumentInState(document);
+        }
       }),
       catchError(error => {
         console.error(`Error fetching document ${documentId}:`, error);
@@ -198,20 +83,149 @@ export class DocumentAnalysisService {
     );
   }
 
-  deleteDocument(documentId: string): Observable<any> {
-    return this.http.delete(`${this.API_BASE_URL}/documents/${documentId}`).pipe(
+  deleteDocument(documentId: string): Observable<boolean> {
+    return this.http.delete(`${CONFIG.API_BASE_URL}/documents/${documentId}`).pipe(
       tap(() => {
-        // 🚀 Signals: Remove document from state immutably
-        this.documentsSignal.update(currentDocs => 
-          currentDocs.filter(doc => doc.id !== documentId)
-        );
+        this.closeConnection(documentId);
+        this.documentsSignal.update(docs => docs.filter(doc => doc.id !== documentId));
       }),
+      map(() => true),
       catchError(this.handleError)
     );
   }
 
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    console.error('An error occurred:', error.message);
-    return throwError(() => new Error('Something bad happened; please try again later.'));
+  // === PRIVATE IMPLEMENTATION ===
+
+  private setupStateLogging(): void {
+    effect(() => {
+      const { length: total } = this.documents();
+      const { length: processing } = this.processingDocuments();
+      console.log(`📊 Documents: ${total} total, ${processing} processing`);
+    });
   }
+
+  private createPendingDocument(response: UploadResponse): HealthDocument {
+    return {
+      id: response.document_id,
+      filename: response.filename,
+      uploaded_at: new Date().toISOString(),
+      status: DocumentStatus.PROCESSING,
+    };
+  }
+
+  private startDocumentStream(documentId: string): void {
+    // Close existing connection if any
+    this.closeConnection(documentId);
+    
+    const eventSource = new EventSource(`${CONFIG.API_BASE_URL}/documents/${documentId}/stream`);
+    this.activeConnections.set(documentId, eventSource);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const result: AnalysisResultResponse = JSON.parse(event.data);
+        this.handleStreamUpdate(result);
+        
+        if (this.isTerminalStatus(result.status)) {
+          this.closeConnection(documentId);
+        }
+      } catch (error) {
+        console.error(`SSE parsing error for ${documentId}:`, error);
+        this.handleStreamError(documentId, 'Invalid response format');
+      }
+    };
+
+    eventSource.onerror = () => {
+      console.error(`SSE connection error for ${documentId}`);
+      this.handleStreamError(documentId, 'Connection to analysis stream failed');
+    };
+  }
+
+  private handleStreamUpdate(result: AnalysisResultResponse): void {
+    console.log(`📡 SSE Update ${result.document_id}: ${result.progress}% (${result.processing_stage})`);
+    
+    const document = this.mapResponseToDocument(result);
+    this.updateDocumentInState(document);
+  }
+
+  private handleStreamError(documentId: string, errorMessage: string): void {
+    this.closeConnection(documentId);
+    this.setDocumentError(documentId, errorMessage);
+  }
+
+  private mapResponseToDocument(result: AnalysisResultResponse): HealthDocument {
+    return {
+      id: result.document_id,
+      filename: result.filename,
+      uploaded_at: result.uploaded_at,
+      status: result.status,
+      processed_at: result.processed_at,
+      raw_text: result.raw_text,
+      extracted_data: result.extracted_data?.map(d => ({
+        marker: d.marker,
+        value: d.value,
+        unit: d.unit,
+        reference_range: d.reference_range
+      })),
+      ai_insights: result.ai_insights,
+      error_message: result.error_message,
+      progress: result.progress,
+      processing_stage: result.processing_stage,
+    };
+  }
+
+  private updateDocumentInState(document: HealthDocument): void {
+    this.documentsSignal.update(docs => {
+      const index = docs.findIndex(d => d.id === document.id);
+      if (index === -1) {
+        console.warn(`⚠️ Document ${document.id} not found in state`);
+        return docs;
+      }
+      
+      const updatedDocs = [...docs];
+      updatedDocs[index] = document;
+      return updatedDocs;
+    });
+  }
+
+  private setDocumentError(documentId: string, errorMessage: string): void {
+    this.documentsSignal.update(docs => {
+      const index = docs.findIndex(d => d.id === documentId);
+      if (index === -1) return docs;
+
+      const updatedDocs = [...docs];
+      updatedDocs[index] = {
+        ...updatedDocs[index],
+        status: DocumentStatus.ERROR,
+        error_message: errorMessage
+      };
+      return updatedDocs;
+    });
+  }
+
+  private closeConnection(documentId: string): void {
+    const connection = this.activeConnections.get(documentId);
+    if (connection) {
+      connection.close();
+      this.activeConnections.delete(documentId);
+      console.log(`🔌 SSE connection closed for ${documentId}`);
+    }
+  }
+
+  private closeAllConnections(): void {
+    this.activeConnections.forEach((connection, documentId) => {
+      connection.close();
+      console.log(`🔌 SSE connection closed for ${documentId} (cleanup)`);
+    });
+    this.activeConnections.clear();
+  }
+
+  private isTerminalStatus(status: DocumentStatus): boolean {
+    return status === DocumentStatus.COMPLETE || status === DocumentStatus.ERROR;
+  }
+
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    const message = error.error?.message || error.message || 'Unknown error occurred';
+    console.error('API Error:', { status: error.status, message });
+    return throwError(() => new Error(message));
+  };
 }
