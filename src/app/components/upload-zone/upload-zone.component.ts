@@ -1,221 +1,175 @@
-import { Component, EventEmitter, Output, Input, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
+/**
+ * 🎯 Upload Zone Component - Angular 19 Expert Implementation
+ * 
+ * Advanced drag & drop file upload component with 4-stage progress tracking.
+ * Demonstrates expert-level Angular 19 patterns and best practices.
+ * 
+ * Features:
+ * - Signal-based reactive state management
+ * - Modern dependency injection with inject()
+ * - Separated template and SCSS files
+ * - 4-stage processing visualization (OCR → AI → Saving → Complete)
+ * - Accessibility and keyboard support
+ * - Type-safe file validation
+ * - Expert-level error handling and logging
+ * 
+ * @author Angular Expert Team
+ * @version 2.0.0 - Angular 19 Modernization
+ */
+
+import { 
+  Component, 
+  EventEmitter, 
+  Output, 
+  input, 
+  computed, 
+  effect, 
+  signal,
+  ChangeDetectionStrategy 
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
+
+/**
+ * 📊 Processing Stage Type Definition
+ * 
+ * Represents the 4-stage medical document processing pipeline:
+ * 1. ocr_extraction - OCR text extraction from uploaded document
+ * 2. ai_analysis - AI analysis of extracted health data
+ * 3. saving_results - Persisting analysis results to database
+ * 4. complete - Processing finished successfully
+ */
+type ProcessingStage = 'ocr_extraction' | 'ai_analysis' | 'saving_results' | 'complete' | undefined;
+
+/**
+ * 📁 File Type Validation Constants
+ * 
+ * Supported medical document formats for upload processing.
+ * Each format is validated for both MIME type and file extension.
+ */
+const ALLOWED_FILE_TYPES = [
+  'application/pdf',
+  'image/png', 
+  'image/jpeg',
+  'image/jpg'
+] as const;
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit for medical documents
 
 @Component({
   selector: 'app-upload-zone',
   standalone: true,
   imports: [CommonModule],
+  templateUrl: './upload-zone.component.html',
+  styleUrl: './upload-zone.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div 
-      class="upload-zone"
-      [class.dragover]="isDragOver"
-      [class.processing]="isUploading || progress !== undefined"
-      (dragover)="onDragOver($event)"
-      (dragleave)="onDragLeave($event)"
-      (drop)="onDrop($event)"
-      (click)="!isUploading && fileInput.click()">
-      
-      @if (!isUploading && progress === undefined) {
-        <div class="flex flex-col items-center space-y-4">
-          <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-          </svg>
-          
-          <div class="text-center">
-            <h3 class="text-lg font-medium text-gray-900 mb-2">
-              Drag & Drop Your Health Report Here
-            </h3>
-            <p class="text-gray-600 mb-4">
-              Or click to select a file (PDF, PNG, JPG)
-            </p>
-            <button type="button" class="btn-primary">
-              Select File
-            </button>
-          </div>
-        </div>
-      }
-      
-      @if (isUploading || progress !== undefined) {
-        <div class="flex flex-col items-center space-y-4">
-          <div class="relative">
-            <div class="w-16 h-16 flex items-center justify-center rounded-full transition-all duration-500">
-              @if (processingStage === 'ocr_extraction') {
-                <div class="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center">
-                  <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                  </svg>
-                </div>
-              }
-              
-              @if (processingStage === 'ai_analysis') {
-                <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center">
-                  <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                  </svg>
-                </div>
-              }
-              
-              @if (processingStage === 'saving_results') {
-                <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center">
-                  <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-                  </svg>
-                </div>
-              }
-              
-              @if (processingStage === 'complete') {
-                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center">
-                  <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                </div>
-              }
-              
-              @if (!processingStage || (processingStage !== 'ocr_extraction' && processingStage !== 'ai_analysis' && processingStage !== 'saving_results' && processingStage !== 'complete')) {
-                <div class="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center">
-                  <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                </div>
-              }
-            </div>
-            
-            @if (processingStage !== 'complete') {
-              <div class="absolute inset-0 flex items-center justify-center">
-                <svg class="animate-spin h-6 w-6" [class]="getSpinnerColorClass()" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              </div>
-            }
-          </div>
-          
-          <div class="text-center w-full max-w-xs">
-            <h3 class="text-lg font-medium mb-2" [class]="getTextColorClass()">
-              {{ getProgressText() }}
-            </h3>
-            
-            <div class="w-full bg-gray-200 rounded-full h-3 mb-2 shadow-inner">
-              <div class="h-3 rounded-full transition-all duration-500 ease-out" 
-                   [class]="getProgressBarColorClass()"
-                   [style.width.%]="progress || 0"></div>
-            </div>
-            
-            <div class="flex justify-between items-center">
-              <p class="text-sm font-semibold" [class]="getTextColorClass()">
-                {{ progress || 0 }}% complete
-              </p>
-              <p class="text-xs text-gray-500">
-                Stage {{ getCurrentStageNumber() }}/4
-              </p>
-            </div>
-            
-            <div class="flex justify-center space-x-2 mt-3">
-              <div class="w-2 h-2 rounded-full transition-all duration-300" 
-                   [class]="getCurrentStageNumber() >= 1 ? 'bg-yellow-500' : 'bg-gray-300'"></div>
-              <div class="w-2 h-2 rounded-full transition-all duration-300" 
-                   [class]="getCurrentStageNumber() >= 2 ? 'bg-blue-500' : 'bg-gray-300'"></div>
-              <div class="w-2 h-2 rounded-full transition-all duration-300" 
-                   [class]="getCurrentStageNumber() >= 3 ? 'bg-purple-500' : 'bg-gray-300'"></div>
-              <div class="w-2 h-2 rounded-full transition-all duration-300" 
-                   [class]="getCurrentStageNumber() >= 4 ? 'bg-green-500' : 'bg-gray-300'"></div>
-            </div>
-          </div>
-        </div>
-      }
-      
-      <input 
-        #fileInput
-        type="file" 
-        class="hidden" 
-        accept=".pdf,.png,.jpg,.jpeg"
-        (change)="onFileSelected($event)">
-    </div>
-  `
+  host: {
+    'class': 'block'
+  }
 })
-export class UploadZoneComponent implements OnChanges {
-  @Output() fileSelected = new EventEmitter<File>();
-  @Input() isUploading = false;
-  @Input() progress: number | undefined = undefined;
-  @Input() processingStage: string | undefined = undefined;
+export class UploadZoneComponent {
   
-  isDragOver = false;
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['progress'] && changes['progress'].currentValue !== changes['progress'].previousValue) {
-      console.log(`🎯 UPLOAD ZONE - Progress updated: ${changes['progress'].previousValue}% → ${changes['progress'].currentValue}%`);
+  // ===== 📤 Component Outputs =====
+  /**
+   * Emits the selected file when user chooses a valid document.
+   * Parent component handles the actual upload and processing logic.
+   */
+  @Output() fileSelected = new EventEmitter<File>();
+  
+  // ===== 📥 Signal-Based Inputs (Angular 19) =====
+  /**
+   * 🔄 Upload State Signal
+   * Indicates whether file upload is currently in progress.
+   * Used to disable UI interactions during processing.
+   */
+  readonly isUploading = input<boolean>(false);
+  
+  /**
+   * 📊 Progress Percentage Signal  
+   * Tracks upload/processing progress from 0-100.
+   * Undefined indicates no active processing.
+   */
+  readonly progress = input<number | undefined>(undefined);
+  
+  /**
+   * 🔄 Processing Stage Signal
+   * Represents current stage in the 4-step processing pipeline.
+   * Drives stage-specific UI visualization and messaging.
+   */
+  readonly processingStage = input<ProcessingStage>(undefined);
+  
+  // ===== 🎯 Internal Component State =====
+  /**
+   * Drag & Drop State Signal
+   * Tracks whether user is currently dragging files over the drop zone.
+   * Enables real-time visual feedback during drag operations.
+   */
+  private readonly _isDragOver = signal<boolean>(false);
+  
+  // ===== 💡 Computed Signals for Derived State =====
+  /**
+   * Public accessor for drag-over state.
+   * Used in template for conditional styling.
+   */
+  readonly isDragOver = computed(() => this._isDragOver());
+  
+  /**
+   * 🎨 Dynamic CSS Class for Progress Text
+   * Computes text color based on current processing stage.
+   * Provides visual consistency across the 4-stage pipeline.
+   */
+  readonly textColorClass = computed(() => {
+    const stage = this.processingStage();
+    switch (stage) {
+      case 'ocr_extraction': return 'text-yellow-700';
+      case 'ai_analysis': return 'text-blue-700';
+      case 'saving_results': return 'text-purple-700';
+      case 'complete': return 'text-green-700';
+      default: return 'text-gray-700';
     }
+  });
+  
+  /**
+   * 📊 Dynamic CSS Class for Progress Bar
+   * Computes progress bar color based on current processing stage.
+   * Creates visually cohesive stage-to-color mapping.
+   */
+  readonly progressBarColorClass = computed(() => {
+    const stage = this.processingStage();
+    switch (stage) {
+      case 'ocr_extraction': return 'bg-yellow-500';
+      case 'ai_analysis': return 'bg-blue-500'; 
+      case 'saving_results': return 'bg-purple-500';
+      case 'complete': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  });
+  
+  /**
+   * 🌀 Dynamic CSS Class for Loading Spinner
+   * Computes spinner color to match current processing stage.
+   * Maintains visual consistency across all UI elements.
+   */
+  readonly spinnerColorClass = computed(() => {
+    const stage = this.processingStage();
+    switch (stage) {
+      case 'ocr_extraction': return 'text-yellow-600';
+      case 'ai_analysis': return 'text-blue-600';
+      case 'saving_results': return 'text-purple-600';
+      default: return 'text-gray-600';
+    }
+  });
+  
+  /**
+   * 📝 Dynamic Progress Text Message
+   * Generates user-friendly status messages for each processing stage.
+   * Provides clear communication about current system activity.
+   */
+  readonly progressText = computed(() => {
+    const stage = this.processingStage();
     
-    if (changes['processingStage'] && changes['processingStage'].currentValue !== changes['processingStage'].previousValue) {
-      console.log(`🔄 UPLOAD ZONE - Stage updated: "${changes['processingStage'].previousValue}" → "${changes['processingStage'].currentValue}"`);
-    }
+    if (!stage) return 'Starting upload...';
     
-    if (this.progress !== undefined || this.processingStage) {
-      console.log(`📊 UPLOAD ZONE - Current state: ${this.progress}% | Stage: "${this.processingStage}"`);
-    }
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isDragOver = true;
-  }
-
-  onDragLeave(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isDragOver = false;
-  }
-
-  onDrop(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isDragOver = false;
-
-    const files = event.dataTransfer?.files;
-    if (files && files.length > 0) {
-      this.handleFile(files[0]);
-    }
-  }
-
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.handleFile(input.files[0]);
-    }
-  }
-
-  private handleFile(file: File): void {
-    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-    
-    if (!allowedTypes.includes(file.type)) {
-      alert('Please select a valid file type (PDF, PNG, or JPG)');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      alert('File size must be less than 10MB');
-      return;
-    }
-
-    this.fileSelected.emit(file);
-  }
-
-  getProgressText(): string {
-    console.log(`🎯 UPLOAD ZONE - Getting progress text for stage: "${this.processingStage}", Progress: ${this.progress}%`);
-    
-    if (!this.processingStage) return 'Starting upload...';
-    
-    switch (this.processingStage) {
+    switch (stage) {
       case 'ocr_extraction':
         return 'Extracting text from document...';
       case 'ai_analysis':
@@ -227,63 +181,210 @@ export class UploadZoneComponent implements OnChanges {
       default:
         return 'Processing document...';
     }
+  });
+  
+  /**
+   * 🔢 Current Stage Number for Progress Visualization
+   * Maps processing stages to numerical values (1-4) for UI indicators.
+   * Enables progressive stage visualization in the interface.
+   */
+  readonly currentStageNumber = computed(() => {
+    const stage = this.processingStage();
+    switch (stage) {
+      case 'ocr_extraction': return 1;
+      case 'ai_analysis': return 2;
+      case 'saving_results': return 3;
+      case 'complete': return 4;
+      default: return 0;
+    }
+  });
+  
+  /**
+   * ✅ Processing Stage Validation
+   * Validates that the current processing stage is one of the expected values.
+   * Used for template conditionals and error prevention.
+   */
+  readonly isValidProcessingStage = computed(() => {
+    const stage = this.processingStage();
+    return stage === 'ocr_extraction' || 
+           stage === 'ai_analysis' || 
+           stage === 'saving_results' || 
+           stage === 'complete';
+  });
+  
+  // ===== 🔄 Reactive Effects (Angular 19) =====
+  /**
+   * 📊 Progress Tracking Effect
+   * Logs progress changes for debugging and analytics.
+   * Demonstrates effect() usage for side effects in response to signal changes.
+   */
+  private readonly progressTrackingEffect = effect(() => {
+    const currentProgress = this.progress();
+    const currentStage = this.processingStage();
+    
+    // Enhanced logging for development and debugging
+    if (currentProgress !== undefined) {
+      console.log(`🎯 UPLOAD ZONE - Progress: ${currentProgress}% | Stage: "${currentStage}"`);
+    }
+    
+    // Could add analytics tracking here in production
+    // this.analyticsService.trackUploadProgress(currentProgress, currentStage);
+  });
+  
+  // ===== 🎬 Event Handlers =====
+  
+  /**
+   * 🖱️ Drag Over Event Handler
+   * Handles file drag over the drop zone with proper event prevention.
+   * Updates visual state to provide immediate user feedback.
+   * 
+   * @param event - DragEvent from browser drag & drop API
+   */
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this._isDragOver.set(true);
   }
-
-  getTextColorClass(): string {
-    switch (this.processingStage) {
-      case 'ocr_extraction':
-        return 'text-yellow-700';
-      case 'ai_analysis':
-        return 'text-blue-700';
-      case 'saving_results':
-        return 'text-purple-700';
-      case 'complete':
-        return 'text-green-700';
-      default:
-        return 'text-gray-700';
+  
+  /**
+   * 🚪 Drag Leave Event Handler  
+   * Handles file drag leaving the drop zone area.
+   * Resets visual feedback when drag operation moves outside component.
+   * 
+   * @param event - DragEvent from browser drag & drop API
+   */
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this._isDragOver.set(false);
+  }
+  
+  /**
+   * 📂 File Drop Event Handler
+   * Handles file drop with comprehensive validation and error handling.
+   * Extracts files from drag & drop operation and processes the first valid file.
+   * 
+   * @param event - DragEvent containing dropped files
+   */
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this._isDragOver.set(false);
+    
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      this.handleFile(files[0]);
     }
   }
-
-  getProgressBarColorClass(): string {
-    switch (this.processingStage) {
-      case 'ocr_extraction':
-        return 'bg-yellow-500';
-      case 'ai_analysis':
-        return 'bg-blue-500';
-      case 'saving_results':
-        return 'bg-purple-500';
-      case 'complete':
-        return 'bg-green-500';
-      default:
-        return 'bg-gray-500';
+  
+  /**
+   * 🗂️ File Input Change Handler
+   * Handles file selection through traditional file input element.
+   * Provides fallback for users who prefer click-to-select over drag & drop.
+   * 
+   * @param event - Input change event from file input element
+   */
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.handleFile(input.files[0]);
     }
+    
+    // Reset input value to allow re-selecting the same file
+    input.value = '';
   }
-
-  getSpinnerColorClass(): string {
-    switch (this.processingStage) {
-      case 'ocr_extraction':
-        return 'text-yellow-600';
-      case 'ai_analysis':
-        return 'text-blue-600';
-      case 'saving_results':
-        return 'text-purple-600';
-      default:
-        return 'text-gray-600';
+  
+  // ===== 🔐 Private Methods =====
+  
+  /**
+   * 📋 File Validation and Processing
+   * 
+   * Expert-level file validation with comprehensive error handling.
+   * Validates file type, size, and emits valid files to parent component.
+   * 
+   * Validation Rules:
+   * - File type must be PDF, PNG, or JPEG
+   * - File size must be under 10MB
+   * - File must have valid MIME type
+   * 
+   * @param file - File object to validate and process
+   * @private
+   */
+  private handleFile(file: File): void {
+    console.log(`📁 UPLOAD ZONE - Processing file: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+    
+    // 🔍 MIME Type Validation
+    if (!ALLOWED_FILE_TYPES.includes(file.type as any)) {
+      const allowedExtensions = ALLOWED_FILE_TYPES
+        .map(type => type.split('/')[1].toUpperCase())
+        .join(', ');
+      
+      this.showUserError(
+        `Invalid file type: ${file.type}`,
+        `Please select a valid file type: ${allowedExtensions}`
+      );
+      return;
     }
+    
+    // 📏 File Size Validation  
+    if (file.size > MAX_FILE_SIZE) {
+      const maxSizeMB = (MAX_FILE_SIZE / 1024 / 1024).toFixed(1);
+      const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+      
+      this.showUserError(
+        `File too large: ${fileSizeMB}MB`,
+        `File size must be less than ${maxSizeMB}MB. Please compress your file or choose a smaller one.`
+      );
+      return;
+    }
+    
+    // ✅ File is valid - emit to parent component
+    console.log(`✅ UPLOAD ZONE - File validation passed, emitting to parent`);
+    this.fileSelected.emit(file);
   }
-
-  getCurrentStageNumber(): number {
-    switch (this.processingStage) {
-      case 'ocr_extraction':
-        return 1;
-      case 'ai_analysis':
-        return 2;
-      case 'saving_results':
-        return 3;
-      case 'complete':
-        return 4;
-      default:
-        return 0;
-    }
+  
+  /**
+   * 🚨 User Error Display
+   * 
+   * Displays user-friendly error messages for file validation failures.
+   * In production, this could integrate with a toast notification service.
+   * 
+   * @param shortMessage - Brief error description for logging
+   * @param userMessage - User-friendly error message for display
+   * @private
+   */
+  private showUserError(shortMessage: string, userMessage: string): void {
+    console.warn(`⚠️ UPLOAD ZONE - ${shortMessage}`);
+    
+    // Simple alert for now - in production, use a proper notification service
+    alert(userMessage);
+    
+    // Could integrate with notification service:
+    // this.notificationService.showError(userMessage);
   }
 }
+
+/**
+ * 📚 Component Usage Example:
+ * 
+ * ```html
+ * <app-upload-zone
+ *   [isUploading]="uploadState.isUploading"
+ *   [progress]="uploadState.progress"
+ *   [processingStage]="uploadState.stage"
+ *   (fileSelected)="onFileSelected($event)">
+ * </app-upload-zone>
+ * ```
+ * 
+ * 🏗️ Architecture Notes:
+ * 
+ * This component follows Angular 19 best practices:
+ * - Signal-based inputs for optimal change detection
+ * - Computed signals for derived state
+ * - Effects for side effects and logging
+ * - Separated template and styles for maintainability
+ * - Type-safe validation with TypeScript
+ * - Comprehensive error handling and user feedback
+ * - Accessibility support with ARIA attributes
+ * - Expert-level documentation and code organization
+ */
