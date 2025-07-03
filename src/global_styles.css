@@ -95,38 +95,44 @@
     @apply bg-gray-50;
   }
   
-  /* Enhanced highlighting for out-of-range values */
-  .data-table tbody tr.highlight-low {
+  /* 3-Tier Clinical Color System for Lab Values */
+  .data-table tbody tr.highlight-borderline {
     @apply bg-amber-50 border-l-4 border-amber-400;
   }
   
-  .data-table tbody tr.highlight-high {
+  .data-table tbody tr.highlight-abnormal {
     @apply bg-red-50 border-l-4 border-red-400;
   }
   
-  .data-table tbody tr.highlight-low td {
+  .data-table tbody tr.highlight-borderline td {
     @apply border-amber-100;
   }
   
-  .data-table tbody tr.highlight-high td {
+  .data-table tbody tr.highlight-abnormal td {
     @apply border-red-100;
   }
   
-  /* Status badges for values */
+  /* Status badges with clinical color scheme */
   .status-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   
-  .status-badge.low {
-    @apply bg-amber-100 text-amber-800 border border-amber-200;
+  .status-badge.borderline {
+    @apply bg-amber-100 text-amber-800;
+    border: 1px solid #f59e0b;
   }
   
-  .status-badge.high {
-    @apply bg-red-100 text-red-800 border border-red-200;
+  .status-badge.abnormal {
+    @apply bg-red-100 text-red-800;
+    border: 1px solid #dc2626;
   }
   
-  .status-badge.standard {
-    @apply bg-blue-100 text-blue-800 border border-blue-200;
+  .status-badge.normal {
+    @apply bg-green-100 text-green-800;
+    border: 1px solid #16a34a;
   }
 }
 
