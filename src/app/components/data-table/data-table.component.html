@@ -23,10 +23,11 @@
         
         <!-- Filter Toggle -->
         <div class="flex items-center space-x-3">
-          <label class="text-sm font-medium text-gray-700">
+          <label for="filter-toggle" class="text-sm font-medium text-gray-700 cursor-pointer">
             Show only out-of-range values
           </label>
           <button
+            id="filter-toggle"
             (click)="toggleFilter()"
             [class]="showOnlyOutOfRange() ? 
               'bg-blue-600 border-blue-600' : 

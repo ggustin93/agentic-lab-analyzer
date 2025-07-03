@@ -1,4 +1,5 @@
-import { Directive, ElementRef, Input, OnDestroy, OnInit } from '@angular/core';
+
+import { Directive, ElementRef, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import tippy, { Instance, Props } from 'tippy.js';
 
 @Directive({
@@ -6,15 +7,17 @@ import tippy, { Instance, Props } from 'tippy.js';
   standalone: true
 })
 export class TooltipDirective implements OnInit, OnDestroy {
-  @Input('appTooltip') content: string = '';
+  private elementRef = inject(ElementRef);
+
+  @Input('appTooltip') content = '';
   @Input() theme: 'light' | 'dark' | 'medical' = 'medical';
   @Input() placement: Props['placement'] = 'top';
-  @Input() maxWidth: number = 300;
-  @Input() allowHTML: boolean = true;
+  @Input() maxWidth = 300;
+  @Input() allowHTML = true;
 
   private tippyInstance: Instance<Props> | null = null;
 
-  constructor(private elementRef: ElementRef) {}
+
 
   ngOnInit() {
     this.initTooltip();

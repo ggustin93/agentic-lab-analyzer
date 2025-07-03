@@ -6,7 +6,7 @@ import { DocumentAnalysisService } from '../../services/document-analysis.servic
 import { DisclaimerBannerComponent } from '../../components/disclaimer-banner/disclaimer-banner.component';
 import { DataTableComponent } from '../../components/data-table/data-table.component';
 import { AiInsightsComponent } from '../../components/ai-insights/ai-insights.component';
-import { HealthDocument, DocumentStatus, DocumentViewModel } from '../../models/document.model';
+import { DocumentStatus, DocumentViewModel } from '../../models/document.model';
 
 /**
  * Analysis Page Component - Angular 19 Modernized

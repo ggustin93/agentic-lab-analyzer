@@ -57,10 +57,9 @@ describe('DocumentAnalysisService (Pragmatic MVP Test)', () => {
           processed_at: new Date().toISOString()
         };
         
-        // Use 'as any' to access the private methods for this test.
-        // First map the response to a document, then update the state
-        const mappedDocument = (service as any).mapResponseToDocument(mockSseUpdate);
-        (service as any).updateDocumentInState(mappedDocument);
+        // Access the public methods for testing the document lifecycle
+        const mappedDocument = service.mapResponseToDocument(mockSseUpdate);
+        service.updateDocumentInState(mappedDocument);
         
         // Assert: Document is now "complete" with all data
         const updatedDocs = service.documents();
