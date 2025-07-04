@@ -210,15 +210,7 @@ export class DashboardComponent implements OnInit {
 
   onDeleteDocument(documentId: string): void {
     console.log('🗑️ Deleting document:', documentId);
-    this.documentService.deleteDocument(documentId)
-      .subscribe({
-        next: () => {
-          console.log('✅ Document deleted successfully');
-        },
-        error: (error) => {
-          console.error('❌ Failed to delete document:', error);
-        }
-      });
+    this.documentService.removeDocument(documentId);
   }
 
   // Simplified methods using computed signals instead of RxJS pipes
