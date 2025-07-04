@@ -6,14 +6,6 @@
 [![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](docker-compose.yml)
 [![Angular](https://img.shields.io/badge/Angular-v19-DD0031?logo=angular)](https://angular.io)
 [![Python](https://img.shields.io/badge/Python-v3.11-3776AB?logo=python)](https://www.python.org)
-# 🚧 [WIP] : DocBot AI: Health Document Analyzer
-
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/ggustin93/agentic-lab-analyzer)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![CI Status](https://github.com/ggustin93/agentic-lab-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/ggustin93/agentic-lab-analyzer/actions/workflows/ci.yml)
-[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](docker-compose.yml)
-[![Angular](https://img.shields.io/badge/Angular-v19-DD0031?logo=angular)](https://angular.io)
-[![Python](https://img.shields.io/badge/Python-v3.11-3776AB?logo=python)](https://www.python.org)
 
 ---
 
