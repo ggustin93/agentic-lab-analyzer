@@ -17,8 +17,6 @@
 
 An AI-powered platform for analyzing medical lab documents, built to demonstrate modern full-stack development practices. This application provides document upload, OCR processing, intelligent analysis, and structured results through a responsive Angular frontend.
 
-An AI-powered platform for analyzing medical lab documents, built to demonstrate modern full-stack development practices. This application provides document upload, OCR processing, intelligent analysis, and structured results through a responsive Angular frontend.
-
 ## 🚀 Key Features
 
 - **Intelligent Document Processing**: Upload lab reports (PDF, PNG, JPG) and receive structured data extraction with AI-powered insights
