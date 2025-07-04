@@ -10,7 +10,7 @@
 ---
 
 > ⚠️ **Important Notice**  
-> This repository is an early-stage proof of concept, initiated in July 2025 as part of job interview preparation.  
+> - This repository is an early-stage proof of concept, initiated in July 2025 as part of job interview preparation.  
 > - The codebase is under active development and may contain incomplete features or vulnerabilities.  
 
 ---
