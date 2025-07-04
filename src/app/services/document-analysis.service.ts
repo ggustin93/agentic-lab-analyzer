@@ -210,16 +210,28 @@ export class DocumentAnalysisService implements OnDestroy {
     return this.apiService.getDocument(documentId).pipe(
       tap((analysis: AnalysisResultResponse) => {
         console.log('📊 Analysis results received:', analysis);
+        console.log('📊 Extracted data in response:', analysis.extracted_data);
         
-        // Update document in store with analysis results
-        this.store.updateDocument(documentId, {
-          ...analysis,
+        // Create a complete HealthDocument object from the API response
+        const documentForStore: HealthDocument = {
+          id: analysis.document_id,
+          filename: analysis.filename,
+          uploaded_at: analysis.uploaded_at,
           status: analysis.status,
           processed_at: analysis.processed_at,
           raw_text: analysis.raw_text,
-          extracted_data: analysis.extracted_data,
-          ai_insights: analysis.ai_insights
-        });
+          extracted_data: analysis.extracted_data || [], // Ensure this is never undefined
+          ai_insights: analysis.ai_insights,
+          error_message: analysis.error_message,
+          progress: analysis.progress,
+          processing_stage: analysis.processing_stage,
+        };
+        
+        console.log('📊 Document for store:', documentForStore);
+        console.log('📊 Extracted data for store:', documentForStore.extracted_data);
+        
+        // Use addDocument to create or update the document in the store
+        this.store.addDocument(documentForStore);
         
         this.store.setAnalysisLoading(false);
       }),
@@ -242,17 +254,121 @@ export class DocumentAnalysisService implements OnDestroy {
   /**
    * Remove Document Workflow
    * 
-   * Removes a document from the system and updates the store.
+   * Removes a document from both the backend database and frontend state.
+   * Ensures proper cleanup and error handling.
    * 
    * @param documentId - ID of document to remove
    */
   removeDocument(documentId: string): void {
-    console.log('🗑️ Removing document:', documentId);
-    this.store.removeDocument(documentId);
+    console.log('🗑️ Removing document from database:', documentId);
     
-    // If this was the selected document, clear selection
-    if (this.store.selectedDocument()?.id === documentId) {
-      this.store.selectDocument(null);
+    // Call backend API to delete the document from database
+    this.apiService.deleteDocument(documentId).subscribe({
+      next: () => {
+        console.log('✅ Document successfully deleted from database:', documentId);
+        
+        // Only remove from frontend state if backend deletion succeeded
+        this.store.removeDocument(documentId);
+        
+        // If this was the selected document, clear selection
+        if (this.store.selectedDocument()?.id === documentId) {
+          this.store.selectDocument(null);
+        }
+        
+        // Force refresh of document list to ensure UI is in sync with database
+        console.log('🔄 Refreshing document list after deletion...');
+        this.loadDocuments().subscribe({
+          next: (documents) => {
+            console.log(`✅ Document list refreshed: ${documents.length} documents remaining`);
+          },
+          error: (error) => {
+            console.warn('⚠️ Failed to refresh document list after deletion:', error);
+          }
+        });
+      },
+      error: (error) => {
+        console.error('❌ Failed to delete document from database:', documentId, error);
+        this.store.setError(`Failed to delete document: ${error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  /**
+   * Retry Document Processing
+   * 
+   * Retries processing for stuck or failed documents by calling the backend retry API.
+   * This is useful when documents get stuck in "Starting processing" state.
+   * 
+   * @param documentId - ID of document to retry
+   */
+  retryDocumentProcessing(documentId: string): void {
+    console.log('🔄 Retrying document processing:', documentId);
+    
+    this.store.clearError();
+    
+    // Call backend API to retry processing
+    this.apiService.retryDocumentProcessing(documentId).subscribe({
+      next: (response) => {
+        console.log('✅ Backend retry initiated:', response.message);
+        
+        // Update local state to show processing restart
+        this.store.updateDocument(documentId, {
+          status: DocumentStatus.PROCESSING,
+          progress: 0,
+          processing_stage: 'ocr_extraction',
+          error_message: undefined
+        });
+        
+        // Disconnect any existing SSE connection and establish new one
+        this.disconnectSSE();
+        this.connectToSSE(documentId);
+        
+        console.log('✅ Processing retry initiated for:', documentId);
+      },
+      error: (error) => {
+        console.error('❌ Failed to retry processing for:', documentId, error);
+        this.store.setError(`Failed to retry processing: ${error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  /**
+   * Check for Stuck Documents
+   * 
+   * Identifies documents that have been processing for too long without progress.
+   * Documents stuck for more than 5 minutes are considered stuck.
+   * 
+   * @returns Array of document IDs that appear to be stuck
+   */
+  getStuckDocuments(): string[] {
+    const now = new Date();
+    const stuckThresholdMs = 5 * 60 * 1000; // 5 minutes
+    
+    return this.documents()
+      .filter(doc => {
+        if (doc.status !== DocumentStatus.PROCESSING) return false;
+        
+        const uploadTime = new Date(doc.uploaded_at);
+        const timeDiff = now.getTime() - uploadTime.getTime();
+        
+        // Consider stuck if processing for more than 5 minutes with 0% progress
+        return timeDiff > stuckThresholdMs && (doc.progress === 0 || doc.progress === undefined);
+      })
+      .map(doc => doc.id);
+  }
+
+  /**
+   * Auto-detect and Report Stuck Documents
+   * 
+   * Utility method to check for stuck documents and log warnings.
+   * Can be called periodically to monitor document processing health.
+   */
+  checkForStuckDocuments(): void {
+    const stuckDocs = this.getStuckDocuments();
+    
+    if (stuckDocs.length > 0) {
+      console.warn(`⚠️ Found ${stuckDocs.length} stuck document(s):`, stuckDocs);
+      console.log('💡 Consider using retryDocumentProcessing() to restart these documents');
     }
   }
 

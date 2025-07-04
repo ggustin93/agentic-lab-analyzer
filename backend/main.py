@@ -112,6 +112,21 @@ async def delete_document(document_id: str):
         logger.error(f"Delete document error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete document: {str(e)}")
 
+@api_router_v1.post("/documents/{document_id}/retry")
+async def retry_document_processing(document_id: str):
+    """Retry processing for a stuck or failed document"""
+    try:
+        success = await document_processor.retry_document_processing(document_id)
+        if not success:
+            raise HTTPException(status_code=404, detail=f"Document with ID {document_id} not found or cannot be retried")
+        return {"message": f"Document {document_id} processing restarted", "document_id": document_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Retry document error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retry document processing: {str(e)}")
+
 
 app.include_router(api_router_v1)
 

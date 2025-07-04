@@ -42,6 +42,7 @@ class DocumentProcessor:
     """
     
     def __init__(self):
+        """Initialize the document processor with OCR and AI analysis agents."""
         self.ocr_agent: OCRExtractorAgent = MistralOCRService()
         self.insight_agent: LabInsightAgent = ChutesAILabAgent()
         self.supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
@@ -109,6 +110,65 @@ class DocumentProcessor:
         except Exception as e:
             logger.error(f"Error deleting document {document_id}: {e}", exc_info=True)
             return False
+
+    async def retry_document_processing(self, document_id: str) -> bool:
+        """
+        Retry processing for a stuck or failed document.
+        
+        Resets the document status and restarts the processing pipeline.
+        This is useful when documents get stuck in processing or fail.
+        
+        Args:
+            document_id: ID of document to retry
+            
+        Returns:
+            bool: True if retry was initiated, False if document not found or already complete
+        """
+        try:
+            document_data = self._load_document_data(document_id)
+            if not document_data:
+                logger.warning(f"Document {document_id} not found for retry")
+                return False
+            
+            # Don't retry already completed documents
+            if document_data.get("status") == "complete":
+                logger.info(f"Document {document_id} is already complete, skipping retry")
+                return False
+            
+            logger.info(f"🔄 Retrying processing for document {document_id}")
+            
+            # Reset document status to processing with initial stage
+            reset_data = {
+                "status": "processing",
+                "progress": 0,
+                "processing_stage": ProcessingStage.OCR_EXTRACTION,
+                "error_message": None,
+                "processed_at": None
+            }
+            self._save_document_data(document_id, reset_data)
+            
+            # Clear any existing analysis results to start fresh
+            await self._delete_analysis_data(document_id)
+            
+            # Get the public URL for reprocessing
+            public_url = document_data.get("public_url")
+            filename = document_data.get("filename")
+            
+            if not public_url or not filename:
+                logger.error(f"Missing public_url or filename for document {document_id}")
+                self._mark_document_error(document_id, "Missing file information for retry")
+                return False
+            
+            # Start the processing pipeline again
+            asyncio.create_task(self._process_document_async(document_id, public_url, filename))
+            
+            logger.info(f"✅ Successfully initiated retry for document {document_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error retrying document {document_id}: {e}", exc_info=True)
+            self._mark_document_error(document_id, f"Retry failed: {str(e)}")
+            return False
     
     async def list_documents(self) -> List[Dict]:
         """
@@ -131,7 +191,7 @@ class DocumentProcessor:
 
     def get_analysis(self, document_id: str) -> Optional[Dict]:
         """
-        Get comprehensive analysis data for a document.
+        Get comprehensive analysis data for a document, formatted for the frontend.
         
         Args:
             document_id: ID of document to retrieve
@@ -140,17 +200,53 @@ class DocumentProcessor:
             Optional[Dict]: Formatted document data with analysis results, or None if not found
         """
         try:
-            document_data = self._load_document_data(document_id)
-            if not document_data:
+            # 1. Fetch the base document
+            doc_result = self.supabase.table("documents").select("*").eq("id", document_id).maybe_single().execute()
+            if not doc_result.data:
+                logger.warning(f"Document {document_id} not found in get_analysis")
                 return None
+            
+            doc = self._format_document_for_frontend(doc_result.data)
 
-            # Build base document structure
-            doc = self._build_base_document_response(document_data)
+            # 2. If complete, fetch and attach analysis results
+            if doc.get("status") == "complete":
+                analysis_result = self.supabase.table("analysis_results").select("*").eq(
+                    "document_id", document_id
+                ).maybe_single().execute()
+                
+                if analysis_result.data:
+                    analysis_data = analysis_result.data
+                    doc["processed_at"] = self._format_iso_date(analysis_data.get("created_at"))
+                    doc["raw_text"] = analysis_data.get("raw_text")
+                    doc["ai_insights"] = analysis_data.get("insights")
+                    
+                    # Fetch and format health markers
+                    markers_result = self.supabase.table("health_markers").select(
+                        "marker_name, value, unit, reference_range"
+                    ).eq("analysis_id", analysis_data['id']).execute()
+                    
+                    if markers_result.data:
+                        doc["extracted_data"] = [
+                            {
+                                "marker": item["marker_name"],
+                                "value": item["value"],
+                                "unit": item["unit"],
+                                "reference_range": item["reference_range"]
+                            } for item in markers_result.data
+                        ]
+                        logger.info(f"Found {len(doc['extracted_data'])} markers for document {document_id}")
+                    else:
+                        doc["extracted_data"] = []
+                else:
+                    # Handle case where document is 'complete' but analysis record is missing
+                    doc["extracted_data"] = []
+                    doc["ai_insights"] = "Analysis data not found."
             
-            # Attach analysis results if processing is complete
-            if doc["status"] == "complete":
-                self._attach_analysis_results(doc, document_id)
-            
+            # Ensure keys exist even if not complete
+            doc.setdefault("extracted_data", [])
+            doc.setdefault("ai_insights", None)
+            doc.setdefault("raw_text", None)
+
             return doc
             
         except Exception as e:
@@ -164,6 +260,11 @@ class DocumentProcessor:
         Execute the complete async processing pipeline with stage tracking.
         
         Pipeline: OCR Extraction → AI Analysis → Save Results → Complete
+        
+        Args:
+            document_id: Unique identifier for the document
+            file_url: Public URL to access the document
+            filename: Original name of the uploaded file
         """
         try:
             document_data = self._load_document_data(document_id)
@@ -189,7 +290,19 @@ class DocumentProcessor:
             self._mark_document_error(document_id, str(e))
 
     async def _execute_ocr_stage(self, document_id: str, file_url: str) -> str:
-        """Execute OCR extraction stage with progress tracking."""
+        """
+        Execute OCR extraction stage with progress tracking.
+        
+        Args:
+            document_id: ID of the document being processed
+            file_url: URL to the document file
+            
+        Returns:
+            str: Extracted text from the document
+            
+        Raises:
+            ValueError: If OCR extraction yields no text
+        """
         logger.info(f"📄 Stage 1/4: Starting OCR extraction for {document_id}")
         self._update_processing_stage(document_id, ProcessingStage.OCR_EXTRACTION)
         
@@ -200,14 +313,31 @@ class DocumentProcessor:
         return raw_text
 
     async def _execute_analysis_stage(self, document_id: str, raw_text: str) -> HealthInsights:
-        """Execute AI analysis stage with progress tracking."""
+        """
+        Execute AI analysis stage with progress tracking.
+        
+        Args:
+            document_id: ID of the document being processed
+            raw_text: Extracted text content from OCR stage
+            
+        Returns:
+            HealthInsights: Structured health insights from AI analysis
+        """
         logger.info(f"🧠 Stage 2/4: Starting AI analysis for {document_id} ({len(raw_text)} chars)")
         self._update_processing_stage(document_id, ProcessingStage.AI_ANALYSIS, {"raw_text": raw_text})
         
         return await self.insight_agent.analyze_text(raw_text)
 
     async def _execute_save_stage(self, document_id: str, filename: str, raw_text: str, insights_result: HealthInsights):
-        """Execute save results stage with progress tracking."""
+        """
+        Execute save results stage with progress tracking.
+        
+        Args:
+            document_id: ID of the document being processed
+            filename: Original filename of the document
+            raw_text: Extracted text content from OCR stage
+            insights_result: Health insights from AI analysis
+        """
         logger.info(f"💾 Stage 3/4: Saving analysis results for {document_id}")
         self._update_processing_stage(document_id, ProcessingStage.SAVING_RESULTS)
         
@@ -229,7 +359,16 @@ class DocumentProcessor:
     # === PRIVATE STORAGE METHODS ===
     
     def _upload_to_storage(self, file_content: bytes, storage_path: str) -> str:
-        """Upload file to Supabase storage and return public URL."""
+        """
+        Upload file to Supabase storage and return public URL.
+        
+        Args:
+            file_content: Binary content of the file
+            storage_path: Path where the file will be stored
+            
+        Returns:
+            str: Public URL to access the uploaded file
+        """
         self.supabase.storage.from_(self.bucket_name).upload(
             path=storage_path,
             file=file_content,
@@ -238,7 +377,12 @@ class DocumentProcessor:
         return self.supabase.storage.from_(self.bucket_name).get_public_url(storage_path)
 
     async def _delete_storage_file(self, storage_path: Optional[str]):
-        """Delete file from storage if path exists."""
+        """
+        Delete file from storage if path exists.
+        
+        Args:
+            storage_path: Path to the file in storage
+        """
         if storage_path:
             try:
                 self.supabase.storage.from_(self.bucket_name).remove([storage_path])
@@ -249,7 +393,18 @@ class DocumentProcessor:
     # === PRIVATE DATABASE METHODS ===
     
     def _create_document_record(self, document_id: str, filename: str, storage_path: str, public_url: str):
-        """Create initial document record in database."""
+        """
+        Create initial document record in database.
+        
+        Args:
+            document_id: Unique identifier for the document
+            filename: Original name of the uploaded file
+            storage_path: Path where the file is stored
+            public_url: Public URL to access the file
+            
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             document_data = {
                 "id": document_id,
@@ -266,7 +421,14 @@ class DocumentProcessor:
             raise
 
     def _update_processing_stage(self, document_id: str, stage: str, extra_data: Optional[Dict] = None):
-        """Update document processing stage and progress."""
+        """
+        Update document processing stage and progress.
+        
+        Args:
+            document_id: ID of the document being processed
+            stage: Current processing stage
+            extra_data: Additional data to save with the update
+        """
         update_data = {
             "status": "processing",
             "processing_stage": stage,
@@ -277,7 +439,13 @@ class DocumentProcessor:
         self._save_document_data(document_id, update_data)
 
     def _mark_document_error(self, document_id: str, error_message: str):
-        """Mark document as failed with error message."""
+        """
+        Mark document as failed with error message.
+        
+        Args:
+            document_id: ID of the document
+            error_message: Description of the error
+        """
         if self._load_document_data(document_id):
             self._save_document_data(document_id, {
                 "status": "error", 
@@ -289,6 +457,13 @@ class DocumentProcessor:
         Save/update document data to database with analysis results if complete.
         
         Handles both document metadata updates and complete analysis persistence.
+        
+        Args:
+            document_id: ID of the document
+            data: Document data to save
+            
+        Raises:
+            Exception: If database operation fails
         """
         try:
             logger.info(f"Updating document {document_id} with status: {data.get('status')}")
@@ -310,7 +485,13 @@ class DocumentProcessor:
             raise
 
     def _update_document_table(self, document_id: str, data: Dict):
-        """Update main documents table with processing status and metadata."""
+        """
+        Update main documents table with processing status and metadata.
+        
+        Args:
+            document_id: ID of the document
+            data: Document data to update
+        """
         doc_payload = {
             "status": data["status"],
             "error_message": data.get("error_message"),
@@ -329,7 +510,13 @@ class DocumentProcessor:
         self.supabase.table("documents").update(doc_payload).eq("id", document_id).execute()
 
     def _save_analysis_results(self, document_id: str, analysis_data: Dict):
-        """Save structured analysis results and health markers to database."""
+        """
+        Save structured analysis results and health markers to database.
+        
+        Args:
+            document_id: ID of the document
+            analysis_data: Structured analysis data to save
+        """
         # Save analysis result record
         analysis_payload = {
             "document_id": document_id,
@@ -348,7 +535,13 @@ class DocumentProcessor:
             self._save_health_markers(analysis_id, markers)
 
     def _save_health_markers(self, analysis_id: str, markers: List[Dict]):
-        """Save health markers for an analysis result."""
+        """
+        Save health markers for an analysis result.
+        
+        Args:
+            analysis_id: ID of the analysis result
+            markers: List of health markers to save
+        """
         # Clear existing markers to prevent duplicates
         self.supabase.table("health_markers").delete().eq("analysis_id", analysis_id).execute()
         
@@ -365,45 +558,13 @@ class DocumentProcessor:
         self.supabase.table("health_markers").insert(markers_payload).execute()
         logger.info(f"Saved {len(markers_payload)} health markers for analysis {analysis_id}")
 
-    def _load_document_data(self, document_id: str) -> Optional[Dict]:
-        """Load complete document data from database including analysis if available."""
-        try:
-            result = self.supabase.table("documents").select("*").eq("id", document_id).maybe_single().execute()
-            if not result.data:
-                return None
-            
-            doc = result.data
-
-            # Attach analysis data if document is complete
-            if doc["status"] == "complete":
-                doc = self._attach_analysis_to_document(doc)
-
-            return doc
-
-        except Exception as e:
-            logger.error(f"Error loading document data for {document_id}: {e}", exc_info=True)
-            return None
-
-    def _attach_analysis_to_document(self, doc: Dict) -> Dict:
-        """Attach analysis results and markers to document data."""
-        analysis_result = self.supabase.table("analysis_results").select("*").eq(
-            "document_id", doc["id"]
-        ).maybe_single().execute()
-        
-        if analysis_result.data:
-            doc["analysis"] = analysis_result.data
-            
-            # Attach health markers
-            markers_result = self.supabase.table("health_markers").select("*").eq(
-                "analysis_id", analysis_result.data['id']
-            ).execute()
-            if markers_result.data:
-                doc["analysis"]["markers"] = markers_result.data
-
-        return doc
-
     async def _delete_analysis_data(self, document_id: str):
-        """Delete analysis results and associated health markers."""
+        """
+        Delete analysis results and associated health markers.
+        
+        Args:
+            document_id: ID of the document
+        """
         analysis_result = self.supabase.table("analysis_results").select("id").eq(
             "document_id", document_id
         ).maybe_single().execute()
@@ -419,23 +580,67 @@ class DocumentProcessor:
             self.supabase.table("analysis_results").delete().eq("id", analysis_id).execute()
             logger.info(f"Deleted analysis result {analysis_id}")
 
+    def _load_document_data(self, document_id: str) -> Optional[Dict]:
+        """
+        Load document data from database.
+        
+        Args:
+            document_id: ID of the document to load
+            
+        Returns:
+            Optional[Dict]: Document data or None if not found
+        """
+        try:
+            result = self.supabase.table("documents").select("*").eq("id", document_id).maybe_single().execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error loading document data for {document_id}: {e}", exc_info=True)
+            return None
+
     def _delete_document_record(self, document_id: str):
-        """Delete main document record from database."""
+        """
+        Delete main document record from database.
+        
+        Args:
+            document_id: ID of the document to delete
+        """
         self.supabase.table("documents").delete().eq("id", document_id).execute()
         logger.info(f"Deleted document record {document_id}")
 
     # === PRIVATE FORMATTING METHODS ===
     
     def _format_insights_as_markdown(self, insights: HealthInsights) -> str:
-        """Convert structured insights to markdown format for frontend display."""
+        """
+        Convert structured insights to markdown format for frontend display.
+        
+        Args:
+            insights: Structured health insights
+            
+        Returns:
+            str: Formatted markdown string
+        """
         md = f"# Analysis Report\n\n## Summary\n{insights.summary}\n\n"
         md += "## Key Findings\n" + "".join([f"- {finding}\n" for finding in insights.key_findings])
         md += "\n## Recommendations\n" + "".join([f"- {rec}\n" for rec in insights.recommendations])
         md += f"\n---\n\n**Disclaimer:** {insights.disclaimer}"
         return md
 
+    def _format_iso_date(self, date_val: Optional[datetime]) -> Optional[str]:
+        """Safely format a datetime object to ISO 8601 string."""
+        if isinstance(date_val, datetime):
+            return date_val.isoformat()
+        return date_val
+
     def _format_document_for_frontend(self, doc: Dict) -> Dict:
-        """Format document data with consistent field names for frontend."""
+        """
+        Format document data with consistent field names for frontend.
+        
+        Args:
+            doc: Document data from database
+            
+        Returns:
+            Dict: Formatted document data for frontend
+        """
         # Handle date field renaming and formatting
         upload_date = doc.get("upload_date")
         if isinstance(upload_date, datetime):
@@ -447,56 +652,6 @@ class DocumentProcessor:
 
         return {
             **doc,
-            "uploaded_at": upload_date,  # Frontend expects 'uploaded_at'
-            "processed_at": processed_at
+            "uploaded_at": self._format_iso_date(doc.get("upload_date")),
+            "processed_at": self._format_iso_date(doc.get("processed_at")),
         }
-
-    def _build_base_document_response(self, document_data: Dict) -> Dict:
-        """Build base document response structure for get_analysis."""
-        upload_date = document_data.get("upload_date")
-        if isinstance(upload_date, datetime):
-            upload_date = upload_date.isoformat()
-            
-        processed_at = document_data.get("processed_at")
-        if isinstance(processed_at, datetime):
-            processed_at = processed_at.isoformat()
-
-        return {
-            "document_id": document_data["id"],
-            "status": document_data.get("status"),
-            "filename": document_data.get("filename"),
-            "uploaded_at": upload_date,
-            "raw_text": document_data.get("raw_text"),
-            "error_message": document_data.get("error_message"),
-            "processed_at": processed_at,
-            "progress": document_data.get("progress"),
-            "processing_stage": document_data.get("processing_stage"),
-            "ai_insights": None,
-            "extracted_data": []
-        }
-
-    def _attach_analysis_results(self, doc: Dict, document_id: str):
-        """Attach analysis results and markers to document response."""
-        analysis_result = self.supabase.table("analysis_results").select("*").eq(
-            "document_id", document_id
-        ).maybe_single().execute()
-        
-        if analysis_result.data:
-            analysis_data = analysis_result.data
-            doc["ai_insights"] = analysis_data.get("insights")
-            
-            # Fetch and format health markers
-            markers_result = self.supabase.table("health_markers").select(
-                "marker_name, value, unit, reference_range"
-            ).eq("analysis_id", analysis_data['id']).execute()
-            
-            if markers_result.data:
-                doc["extracted_data"] = [
-                    {
-                        "marker": item["marker_name"],
-                        "value": item["value"],
-                        "unit": item["unit"],
-                        "reference_range": item["reference_range"]
-                    } for item in markers_result.data
-                ]
-                logger.info(f"Found {len(doc['extracted_data'])} markers for document {document_id}")

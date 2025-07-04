@@ -156,6 +156,19 @@ export class DocumentApiService {
   }
 
   /**
+   * Retry Document Processing
+   * 
+   * Makes HTTP POST request to retry processing for stuck documents.
+   * 
+   * @param documentId - ID of document to retry
+   * @returns Observable of retry response
+   */
+  retryDocumentProcessing(documentId: string): Observable<{message: string, document_id: string}> {
+    return this.http.post<{message: string, document_id: string}>(`${API_CONFIG.BASE_URL}/documents/${documentId}/retry`, {})
+      .pipe(catchError(this.handleHttpError));
+  }
+
+  /**
    * Create SSE Connection for Real-time Updates
    * 
    * Establishes a Server-Sent Events connection for real-time document processing updates.

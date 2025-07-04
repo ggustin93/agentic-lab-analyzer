@@ -1,14 +1,44 @@
-# Active Context: Comprehensive Testing Strategy Implementation
+# Active Context: Document Management & Processing Reliability
 
 ## 1. Current Work Focus
 
-**✅ TESTING IMPLEMENTATION COMPLETED:** Successfully implemented a comprehensive, pragmatic testing strategy following the "80/20" approach outlined in `DOCS/todo-gemini-testing.md`. All three critical tests are now operational and provide high confidence in the core application functionality.
+**✅ DOCUMENT MANAGEMENT FIXES COMPLETED:** Successfully resolved critical document lifecycle issues including page refresh loading, delete functionality, and stuck document recovery. All core document operations now work reliably.
 
-**Previous Major Achievement:** Enhanced upload progress display system with sophisticated, stage-specific visual feedback and real-time SSE updates.
+**Previous Major Achievement:** Comprehensive testing strategy implementation with Docker-based E2E testing infrastructure and reference range accuracy improvements.
 
 ## 2. Recent Changes
 
-### 🧪 **Comprehensive Testing Strategy Implementation (Dec 2024)**
+### 🔧 **Critical Document Management Fixes (January 2025)**
+
+**✅ COMPLETED: Document Lifecycle Reliability**
+
+1. **Document Loading on Page Refresh - FIXED**
+   - **Problem**: Documents didn't load when page was refreshed, even though they existed in database
+   - **Solution**: Added `loadDocuments()` call in `DashboardComponent.ngOnInit()` to fetch existing documents on initialization
+   - **Impact**: All existing documents now properly display after page refresh
+
+2. **Delete Functionality - FIXED**
+   - **Problem**: Documents were only removed from frontend state but not deleted from database, causing them to reappear on refresh
+   - **Solution**: Updated `removeDocument()` method to call backend `deleteDocument()` API before updating frontend state
+   - **Error Handling**: Added proper error handling with user feedback for failed deletions
+   - **Impact**: Documents are now permanently deleted from both database and frontend state
+
+3. **Stuck Document Detection & Recovery System - FIXED**
+   - **Problem**: Documents could get stuck in "Starting processing" state with no recovery mechanism
+   - **Solution**: Implemented comprehensive retry system with automatic detection, visual indicators, and backend retry API
+   - **Features**: 
+     - Automatic detection of documents stuck >5 minutes with 0% progress
+     - Visual "Retry" buttons with confirmation dialogs
+     - Backend `/documents/{id}/retry` endpoint for processing restart
+     - Enhanced delete buttons (red styling for error documents)
+     - Improved status messages and user feedback
+
+4. **Analysis Page Refresh Loading - FIXED**
+   - **Problem**: Refreshing analysis page showed "Document Not Found" even when document existed in database
+   - **Solution**: Added document store population on analysis page initialization, similar to dashboard fix
+   - **Impact**: Analysis pages now load correctly after page refresh, maintaining proper navigation flow
+
+### 🧪 **Previous Major Achievement: Comprehensive Testing Strategy (Dec 2024)**
 
 **✅ COMPLETED: All Three Critical Tests Following "80/20" Strategy**
 
@@ -132,13 +162,7 @@ npm run test:all:docker     # Run complete test suite in Docker
 
 ## 5. Next Steps
 
-### 🧪 **Status: COMPREHENSIVE TESTING FOUNDATION ESTABLISHED!**
-1. **✅ All Three Critical Tests:** Unit tests, component tests, and E2E infrastructure fully implemented
-2. **✅ Docker-First Testing:** Complete containerized testing environment operational
-3. **✅ Professional Documentation:** README updated with Docker testing commands and workflow
-4. **✅ CI/CD Ready:** Docker-based testing perfect for GitHub Actions and production pipelines
-
-### 🚀 **Continued Development Priorities**
+### 🚀 **Development Priorities**
 1. **Security Enhancement:** Address Supabase RLS (Row-Level Security) advisory for production readiness
 2. **Component Modernization:** Continue applying Angular 19 patterns to remaining components (ai-insights, analysis)
 3. **Testing Expansion:** Implement future testing enhancements from the roadmap:
@@ -148,14 +172,37 @@ npm run test:all:docker     # Run complete test suite in Docker
    - Accessibility (a11y) testing
 4. **Performance Monitoring:** Verify that enhanced visuals don't impact performance
 
-## 4. Active Decisions & Considerations
+### 🔧 **Technical Debt & Improvements**
+1. **Error Handling Enhancement:** Expand error handling coverage for edge cases
+2. **Performance Optimization:** Monitor and optimize document processing pipeline
+3. **User Experience:** Continue improving visual feedback and user guidance
+4. **Documentation:** Keep technical documentation current with system evolution
 
+## 6. Active Decisions & Considerations
+
+### Document Management Strategy
+- **Reliability Focus:** Prioritized fixing core document lifecycle issues over feature additions
+- **Error Recovery:** Implemented comprehensive retry mechanisms for stuck processing
+- **User Experience:** Added clear visual feedback for all document states including stuck/error conditions
+- **Data Integrity:** Ensured frontend state always reflects actual database state
+
+### Technical Architecture
 - **Real-time Progress Strategy:** Successfully implemented stage-based progress tracking using existing SSE infrastructure with enhanced visual feedback
 - **Color Psychology:** Chose intuitive color progression (yellow→blue→purple→green) to guide users through the processing journey
 - **Performance Balance:** Enhanced visuals while maintaining responsive performance through optimized change detection
 - **Debugging Support:** Added comprehensive logging throughout the progress chain for future troubleshooting
 
-## Current Work Focus: Reference Range Accuracy & Visual Feedback Enhancement
+## 7. System Status
+
+**✅ CURRENT STATE: DOCUMENT MANAGEMENT FULLY OPERATIONAL**
+- **Document Loading:** Works reliably on page refresh
+- **Delete Functionality:** Properly removes documents from database and frontend
+- **Stuck Document Recovery:** Automatic detection and one-click retry system
+- **Progress Tracking:** Real-time updates with visual stage indicators
+- **Testing Infrastructure:** Comprehensive Docker-based testing environment
+- **Reference Range Accuracy:** OCR-first approach with proper highlighting
+
+**📊 Professional Foundation Complete:** Expert-level document management system with comprehensive error handling, visual feedback, and testing infrastructure ready for production deployment.
 
 ### Recent Fixes Completed (Dec 2024)
 

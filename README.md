@@ -21,8 +21,8 @@ An AI-powered platform for analyzing medical lab documents, built to demonstrate
 
 - **Intelligent Document Processing**: Upload lab reports (PDF, PNG, JPG) and receive structured data extraction with AI-powered insights
 - **Agent-Based Architecture**: Modular system with specialized AI agents for OCR and lab data analysis
-- **Real-Time Processing**: Monitor document processing status via Server-Sent Events (SSE)
-- **Persistent Storage**: Automatic saving of documents and analysis results for future reference
+- **Real-Time Processing**: Monitor document processing status via Server-Sent Events (SSE) with automatic error detection and recovery
+- **Persistent Storage**: Automatic saving of documents and analysis results with reliable state management
 - **Responsive UI**: Clean, modern interface built with Angular 19 and Tailwind CSS
 
 ## 🏗️ Architecture

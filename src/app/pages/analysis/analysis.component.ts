@@ -1,12 +1,12 @@
 import { Component, OnInit, OnDestroy, signal, computed, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule, NavigationEnd } from '@angular/router';
-import { Subject, takeUntil, switchMap, map, of, filter } from 'rxjs';
+import { Subject, takeUntil, switchMap, map, of, filter, catchError } from 'rxjs';
 import { DocumentAnalysisService } from '../../services/document-analysis.service';
 import { DisclaimerBannerComponent } from '../../components/disclaimer-banner/disclaimer-banner.component';
 import { DataTableComponent } from '../../components/data-table/data-table.component';
 import { AiInsightsComponent } from '../../components/ai-insights/ai-insights.component';
-import { DocumentStatus, DocumentViewModel } from '../../models/document.model';
+import { DocumentStatus, DocumentViewModel, HealthDocument } from '../../models/document.model';
 
 /**
  * Analysis Page Component - Angular 19 Modernized
@@ -352,50 +352,65 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Reset the document to undefined when initializing to show loading state
-    this.document.set(undefined);
-    
-    // Use paramMap instead of params to react to all route parameter changes
     this.route.paramMap
       .pipe(
         takeUntil(this.destroy$),
         switchMap(params => {
-          // Reset document to undefined on each navigation to show loading state
-          this.document.set(undefined);
-          
+          this.document.set(undefined); // Reset for loading state
           const id = params.get('id');
           if (!id) {
             return of(null);
           }
+
+          console.log(`[AnalysisComponent] Fetching analysis for document ID: ${id}`);
           
-          console.log('Fetching document with ID:', id);
-          
-          // First check if document exists in store
-          const existingDoc = this.documentService.documents().find(doc => doc.id === id);
-          if (existingDoc && existingDoc.status === DocumentStatus.COMPLETE) {
-            return of(existingDoc);
-          }
-          
-          // If not found or not complete, fetch analysis results
+          // Always fetch fresh analysis data directly from the API
           return this.documentService.getAnalysisResults(id).pipe(
-            map(() => {
-              // After fetching, get the updated document from store
-              return this.documentService.documents().find(doc => doc.id === id) || null;
+            map(response => {
+              console.log('[AnalysisComponent] Direct API response:', response);
+              
+              // Create a HealthDocument from the API response
+              const document: HealthDocument = {
+                id: response.document_id,
+                filename: response.filename,
+                uploaded_at: response.uploaded_at,
+                status: response.status,
+                processed_at: response.processed_at,
+                raw_text: response.raw_text,
+                extracted_data: response.extracted_data || [], // Ensure this is never undefined
+                ai_insights: response.ai_insights,
+                error_message: response.error_message,
+                progress: response.progress,
+                processing_stage: response.processing_stage
+              };
+              
+              console.log('[AnalysisComponent] Constructed document:', document);
+              console.log('[AnalysisComponent] Extracted data:', document.extracted_data);
+              
+              return document;
+            }),
+            catchError((error: unknown) => {
+              console.error('[AnalysisComponent] Error fetching analysis results:', error);
+              return of(null); // Return null to show document not found state
             })
           );
         }),
         map(doc => {
-          console.log('Document data received:', doc);
+          console.log('[AnalysisComponent] Document data for view model:', doc);
           return doc ? new DocumentViewModel(doc) : null;
         })
       )
       .subscribe({
         next: (document) => {
-          console.log('Document view model:', document);
+          console.log('[AnalysisComponent] Setting document view model:', document?.title);
+          if (document) {
+            console.log('[AnalysisComponent] Document view model created:', document.filename);
+            console.log('[AnalysisComponent] Extracted data in view model:', document.extractedData);
+          }
           this.document.set(document);
         },
         error: (error) => {
-          console.error('Error loading document:', error);
+          console.error('[AnalysisComponent] Error in subscription:', error);
           this.document.set(null);
         }
       });

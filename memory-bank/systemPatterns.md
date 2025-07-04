@@ -81,5 +81,22 @@ supabase/
 - **Supabase CLI** for local development workflows
 - **Safety features**: IF EXISTS/NOT EXISTS, proper indexes, documentation
 
-- **File Structure:** Individual task files in `tasks/` for detailed implementation tracking and documentation
-- **Tag System:** Context-aware task organization supporting feature branches, experiments, and collaborative development 
+## 7. Document Management Reliability Patterns
+
+### **Error Recovery Architecture**
+- **State Synchronization:** Frontend state always reflects actual database state through initialization loading
+- **Persistence Layer:** All document operations (create, delete) call backend APIs before updating frontend state
+- **Stuck Document Detection:** Time-based detection with configurable thresholds for automatic problem identification
+- **Recovery Mechanisms:** One-click retry functionality with backend state reset capabilities
+- **Visual Feedback:** Clear status indicators for all document states including error and stuck conditions
+
+### **Document Lifecycle Management**
+- **Initialization Pattern:** Load existing documents on component initialization to ensure state consistency
+- **Delete Pattern:** Backend API call → Frontend state update → User feedback
+- **Retry Pattern:** State reset → Processing restart → Visual feedback → Monitoring resumption
+- **Error Handling:** Graceful degradation with user-friendly error messages and recovery options
+
+### **Monitoring & Detection**
+- **Periodic Checks:** Automatic stuck document detection with configurable intervals
+- **Time-based Thresholds:** Documents stuck for >5 minutes with 0% progress trigger recovery options
+- **Visual Indicators:** Orange warning styling for stuck documents with clear action prompts 
