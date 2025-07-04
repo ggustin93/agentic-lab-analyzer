@@ -369,7 +369,20 @@ export class AnalysisComponent implements OnInit, OnDestroy {
           }
           
           console.log('Fetching document with ID:', id);
-          return this.documentService.getDocument(id);
+          
+          // First check if document exists in store
+          const existingDoc = this.documentService.documents().find(doc => doc.id === id);
+          if (existingDoc && existingDoc.status === DocumentStatus.COMPLETE) {
+            return of(existingDoc);
+          }
+          
+          // If not found or not complete, fetch analysis results
+          return this.documentService.getAnalysisResults(id).pipe(
+            map(() => {
+              // After fetching, get the updated document from store
+              return this.documentService.documents().find(doc => doc.id === id) || null;
+            })
+          );
         }),
         map(doc => {
           console.log('Document data received:', doc);

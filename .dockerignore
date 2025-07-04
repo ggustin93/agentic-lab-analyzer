@@ -1,0 +1,56 @@
+# Git
+.git/
+.github/
+.gitignore
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Dependency directories
+bower_components/
+jspm_packages/
+
+# Build output
+dist/
+build/
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Task Master
+.taskmaster/
+
+# Cypress
+cypress/
+cypress.config.js
+cypress.config.ts
+
+# Other
+Dockerfile*
+docker-compose.yml
+README.md
+memory-bank/
+supabase/
+DOCS/
+karma.conf.js 

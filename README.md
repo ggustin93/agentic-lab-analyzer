@@ -111,12 +111,12 @@ The Python backend is built with **FastAPI** for its high performance and native
 
 ### Frontend Design
 
-The Angular frontend is architected using modern patterns to ensure a performant and maintainable codebase.
+The Angular frontend implements modern architectural patterns for maintainability and performance.
 
--   **Centralized State Management**: A single service, `DocumentAnalysisService`, manages the client-side state using **Angular Signals**. This provides a reactive and efficient way to update the UI.
--   **Separation of Concerns**: The architecture separates "smart" services, which handle business logic and API calls, from "presentational" components, which are only responsible for displaying data.
--   **Performance Optimization**: **`OnPush`** change detection is used globally to minimize rendering cycles. The application is built entirely with **Standalone Components** to improve modularity and support tree-shaking.
--   **Scalability Path**: The routing is structured to support **lazy loading** for feature-heavy modules in future development, which is a standard practice for optimizing initial load times in larger applications.
+-   **Signal-Based State Management**: Uses Angular 19's native signals through a dedicated `DocumentStore` for reactive state management, with `DocumentAnalysisService` handling workflow orchestration.
+-   **Separation of Concerns**: Three-layer architecture separating state (`DocumentStore`), business logic (`DocumentAnalysisService`), and HTTP operations (`DocumentApiService`).
+-   **Performance Optimization**: `OnPush` change detection with standalone components for optimal rendering and tree-shaking.
+-   **Modern Patterns**: `inject()` function for dependency injection, computed signals for derived state, and effect-based side effect management.
 
 ## 🔄 Implementation Status
 
@@ -248,12 +248,12 @@ For production deployment, this application could be enhanced with:
 
 ## 📖 Development Notes
 
-This project demonstrates modern Angular development patterns including:
-- Signal-based state management (Angular 19)
-- OnPush change detection optimization
-- Comprehensive testing strategy (unit, component, E2E)
-- Docker-based development environment
-- Professional CI/CD practices
+This project demonstrates modern Angular 19 patterns:
+- Three-layer service architecture with signal-based state management
+- Separation of state (`DocumentStore`), business logic (`DocumentAnalysisService`), and API calls (`DocumentApiService`)
+- Professional documentation and TypeScript typing throughout
+- Comprehensive testing strategy covering critical workflows
+- Docker-based development environment with CI/CD
 
 ## 📝 License
 
