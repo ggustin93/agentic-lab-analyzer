@@ -79,8 +79,8 @@ class ChutesAILabAgent(LabInsightAgent):
         logger.info(f"Analyzing text with Chutes.AI agent using model {settings.CHUTES_AI_MODEL}")
         
         system_prompt = """
-        You are a highly specialized AI agent for analyzing blood test lab reports. 
-        Extract structured information and return it as a JSON object with this exact structure:
+        You are a highly specialized AI agent for analyzing blood test lab reports and give expert and actionable medical interpretation. 
+        Your response MUST be a JSON object following this exact structure:
         {
             "data": {
                 "markers": [{"marker": "name", "value": "value", "unit": "unit", "reference_range": "range"}],

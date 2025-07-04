@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.backend
     ports:
       - "8000:8000"
