@@ -138,7 +138,8 @@ type ProcessingStage = 'ocr_extraction' | 'ai_analysis' | 'saving_results' | 'co
           <div class="max-w-4xl mx-auto">
             <app-document-list 
               [documents]="documents()"
-              (deleteDocument)="onDeleteDocument($event)">
+              (deleteDocument)="onDeleteDocument($event)"
+              (retryDocument)="onRetryDocument($event)">
             </app-document-list>
           </div>
         </div>
@@ -187,8 +188,29 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // No manual subscription management needed with signals!
     console.log('🚀 Dashboard initialized with signal-based state management');
+    
+    // Load existing documents from database on initialization
+    console.log('📋 Loading existing documents from database...');
+    this.documentService.loadDocuments().subscribe({
+      next: (documents) => {
+        console.log(`✅ Successfully loaded ${documents.length} existing documents`);
+        
+        // Check for stuck documents on load
+        this.documentService.checkForStuckDocuments();
+      },
+      error: (error) => {
+        console.error('❌ Failed to load existing documents:', error);
+      }
+    });
+
+    // Set up periodic check for stuck documents (every 2 minutes)
+    setInterval(() => {
+      const stuckDocs = this.documentService.getStuckDocuments();
+      if (stuckDocs.length > 0) {
+        console.warn(`⚠️ Dashboard detected ${stuckDocs.length} stuck document(s). Consider using the retry button.`);
+      }
+    }, 2 * 60 * 1000); // Check every 2 minutes
   }
 
   // No ngOnDestroy needed - effects are automatically cleaned up!
@@ -211,6 +233,11 @@ export class DashboardComponent implements OnInit {
   onDeleteDocument(documentId: string): void {
     console.log('🗑️ Deleting document:', documentId);
     this.documentService.removeDocument(documentId);
+  }
+
+  onRetryDocument(documentId: string): void {
+    console.log('🔄 Retrying document processing:', documentId);
+    this.documentService.retryDocumentProcessing(documentId);
   }
 
   // Simplified methods using computed signals instead of RxJS pipes

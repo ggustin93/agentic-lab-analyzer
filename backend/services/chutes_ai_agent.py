@@ -123,8 +123,46 @@ class ChutesAILabAgent(LabInsightAgent):
             - **DO NOT** use these as reference ranges. They are the patient's past data, not medical standards.
 
         3.  **CURRENT VALUES ("Résultats" / "Results"):**
-            - These are the CURRENT test results being analyzed.
-            - Use these for the `value` field.
+            - These are the CURRENT test results being analyzed
+            - Use these for the `value` field
+
+        EXAMPLES OF CORRECT EXTRACTION:
+        - If you see: "Hémoglobine | 16.1 | g/dL | 13.0 - 17.5 | 16.3"
+        Extract: {"marker": "Hémoglobine", "value": "16.1", "unit": "g/dL", "reference_range": "13.0 - 17.5"}
+        NOT: {"reference_range": "16.3"} (this is a previous result!)
+
+        - If you see: "VGM | 91.9 | μm³ | 80.0 - 98.0 | 95.2"
+        Extract: {"marker": "VGM", "value": "91.9", "unit": "μm³", "reference_range": "80.0 - 98.0"}
+        NOT: {"reference_range": "95.2"} (this is a previous result!)
+
+        REFERENCE RANGE QUALITY REQUIREMENTS:
+        - Preserve exact formatting from the document (including spaces, dashes, symbols)
+        - Common formats: "3.5-5.0", "< 2.0", "> 40", "Normal: 65-100", "40.0 - 54.0"
+        - If unclear or missing, return empty string for reference_range
+        - Never guess or approximate ranges
+        - Never use previous results as reference ranges
+
+        CRITICAL: CLEAN UP MALFORMED OCR PATTERNS:
+        When you encounter malformed reference ranges from OCR, clean them up:
+        
+        MALFORMED PATTERNS TO FIX:
+        - "<6 - 6.0" → Should be "<6.0" (upper bound only)
+        - "<2 - 2.0" → Should be "<2.0" (upper bound only)  
+        - "<0 - 0.50" → Should be "<0.50" (upper bound only)
+        - "<5 - 5.0" → Should be "<5.0" (upper bound only)
+        
+        CLEANING RULES:
+        1. If you see pattern like "<X - Y" where X ≤ Y, extract as "<Y" (use the higher value)
+        2. If you see pattern like ">X - Y" where X ≥ Y, extract as ">X" (use the higher value)
+        3. Remove redundant formatting: "< 6.0 - 6.0" → "<6.0"
+        4. Preserve proper ranges: "3.5 - 5.0" → Keep as "3.5 - 5.0" (this is correct)
+        
+        EXAMPLES OF PROPER CLEANING:
+        - OCR gives: "<6 - 6.0" → Extract: "<6.0"
+        - OCR gives: "<2 - 2.0" → Extract: "<2.0"
+        - OCR gives: "<0 - 0.50" → Extract: "<0.50"
+        - OCR gives: "3.5 - 5.0" → Extract: "3.5 - 5.0" (keep as-is, this is correct)
+        - OCR gives: "> 40 - 40" → Extract: ">40"
         """
 
         try:

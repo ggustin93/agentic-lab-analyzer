@@ -38,6 +38,11 @@ export class DocumentListComponent {
   readonly deleteDocument = output<string>();
   
   /**
+   * Emits document ID when user requests retry processing
+   */
+  readonly retryDocument = output<string>();
+  
+  /**
    * Health documents to display in the list
    */
   readonly documents = input<HealthDocument[]>([]);
@@ -103,58 +108,24 @@ export class DocumentListComponent {
   }
   
   /**
-   * Handles document deletion with user confirmation
+   * Handle document deletion with confirmation
    */
   onDeleteDocument(documentId: string): void {
-    const confirmMessage = 'Are you sure you want to delete this document analysis? This action cannot be undone.';
+    const document = this.documents().find(d => d.id === documentId);
+    const documentName = document?.filename || 'this document';
+    const isErrorDocument = document?.status === DocumentStatus.ERROR;
+    
+    // Create appropriate confirmation message
+    const confirmMessage = isErrorDocument 
+      ? `Delete the failed analysis for "${documentName}"?\n\nThis will permanently remove the document and any error logs.`
+      : `Delete "${documentName}"?\n\nThis will permanently remove the document and all analysis results.`;
     
     if (confirm(confirmMessage)) {
+      console.log('🗑️ User confirmed deletion of document:', documentId);
       this.deleteDocument.emit(documentId);
+    } else {
+      console.log('❌ User cancelled deletion of document:', documentId);
     }
-  }
-  
-  /**
-   * Gets user-friendly text for processing stages
-   */
-  processingStageText(document: HealthDocument): string {
-    if (!document.processing_stage) return 'Starting processing...';
-    
-    const stageTexts = {
-      'ocr_extraction': 'Extracting text...',
-      'ai_analysis': 'AI analyzing data...',
-      'saving_results': 'Finalizing results...',
-      'complete': 'Complete!'
-    };
-    
-    return (document.processing_stage && stageTexts[document.processing_stage]) || 'Processing...';
-  }
-  
-  /**
-   * Gets CSS classes for stage-specific styling
-   */
-  processingStageColor(document: HealthDocument): string {
-    const stageStyles = {
-      'ocr_extraction': 'text-yellow-600 bg-yellow-50 border-yellow-200',
-      'ai_analysis': 'text-blue-600 bg-blue-50 border-blue-200',
-      'saving_results': 'text-purple-600 bg-purple-50 border-purple-200',
-      'complete': 'text-green-600 bg-green-50 border-green-200'
-    };
-    
-    return (document.processing_stage && stageStyles[document.processing_stage]) || 'text-gray-600 bg-gray-50 border-gray-200';
-  }
-  
-  /**
-   * Gets progress bar color classes
-   */
-  progressBarColor(document: HealthDocument): string {
-    const colorMap = {
-      'ocr_extraction': 'bg-yellow-500',
-      'ai_analysis': 'bg-blue-500',
-      'saving_results': 'bg-purple-500',
-      'complete': 'bg-green-500'
-    };
-    
-    return (document.processing_stage && colorMap[document.processing_stage]) || 'bg-gray-500';
   }
   
   /**
@@ -169,5 +140,95 @@ export class DocumentListComponent {
     };
     
     return (document.processing_stage && stageNumbers[document.processing_stage]) || 0;
+  }
+
+  /**
+   * Checks if a document appears to be stuck in processing
+   */
+  isDocumentStuck(document: HealthDocument): boolean {
+    if (document.status !== DocumentStatus.PROCESSING) return false;
+    
+    const now = new Date();
+    const uploadTime = new Date(document.uploaded_at);
+    const timeDiff = now.getTime() - uploadTime.getTime();
+    
+    // Consider stuck if processing for more than 5 minutes with 0% progress or no progress info
+    const stuckThresholdMs = 5 * 60 * 1000; // 5 minutes
+    const hasNoProgress = document.progress === 0 || document.progress === undefined;
+    const hasNoStage = !document.processing_stage;
+    
+    return timeDiff > stuckThresholdMs && (hasNoProgress || hasNoStage);
+  }
+
+  /**
+   * Handles retry processing for stuck documents
+   */
+  onRetryDocument(documentId: string): void {
+    const confirmMessage = 'This document appears to be stuck in processing. Would you like to retry the analysis?';
+    
+    if (confirm(confirmMessage)) {
+      console.log('🔄 User requesting retry for document:', documentId);
+      this.retryDocument.emit(documentId);
+    }
+  }
+
+  /**
+   * Gets user-friendly text for processing stages - improved to handle undefined stages
+   */
+  processingStageText(document: HealthDocument): string {
+    // Handle stuck documents
+    if (this.isDocumentStuck(document)) {
+      return 'Processing stuck - Click retry';
+    }
+    
+    // Handle undefined or null stages
+    if (!document.processing_stage) return 'Starting processing...';
+    
+    const stageTexts = {
+      'ocr_extraction': 'Extracting text...',
+      'ai_analysis': 'AI analyzing data...',
+      'saving_results': 'Finalizing results...',
+      'complete': 'Complete!'
+    };
+    
+    return stageTexts[document.processing_stage] || 'Processing...';
+  }
+
+  /**
+   * Gets CSS classes for stage-specific styling - improved to handle stuck documents
+   */
+  processingStageColor(document: HealthDocument): string {
+    // Handle stuck documents with warning color
+    if (this.isDocumentStuck(document)) {
+      return 'text-orange-600 bg-orange-50 border-orange-200';
+    }
+    
+    const stageStyles = {
+      'ocr_extraction': 'text-yellow-600 bg-yellow-50 border-yellow-200',
+      'ai_analysis': 'text-blue-600 bg-blue-50 border-blue-200',
+      'saving_results': 'text-purple-600 bg-purple-50 border-purple-200',
+      'complete': 'text-green-600 bg-green-50 border-green-200'
+    };
+    
+    return (document.processing_stage && stageStyles[document.processing_stage]) || 'text-gray-600 bg-gray-50 border-gray-200';
+  }
+
+  /**
+   * Gets progress bar color classes - improved to handle stuck documents
+   */
+  progressBarColor(document: HealthDocument): string {
+    // Handle stuck documents with warning color
+    if (this.isDocumentStuck(document)) {
+      return 'bg-orange-500';
+    }
+    
+    const colorMap = {
+      'ocr_extraction': 'bg-yellow-500',
+      'ai_analysis': 'bg-blue-500',
+      'saving_results': 'bg-purple-500',
+      'complete': 'bg-green-500'
+    };
+    
+    return (document.processing_stage && colorMap[document.processing_stage]) || 'bg-gray-500';
   }
 }
