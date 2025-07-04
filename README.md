@@ -1,4 +1,4 @@
-# DocBot AI: Health Document Analyzer
+# 🚧 [WIP] : DocBot AI: Health Document Analyzer
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/ggustin93/agentic-lab-analyzer)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -6,6 +6,24 @@
 [![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](docker-compose.yml)
 [![Angular](https://img.shields.io/badge/Angular-v19-DD0031?logo=angular)](https://angular.io)
 [![Python](https://img.shields.io/badge/Python-v3.11-3776AB?logo=python)](https://www.python.org)
+# 🚧 [WIP] : DocBot AI: Health Document Analyzer
+
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/ggustin93/agentic-lab-analyzer)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CI Status](https://github.com/ggustin93/agentic-lab-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/ggustin93/agentic-lab-analyzer/actions/workflows/ci.yml)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](docker-compose.yml)
+[![Angular](https://img.shields.io/badge/Angular-v19-DD0031?logo=angular)](https://angular.io)
+[![Python](https://img.shields.io/badge/Python-v3.11-3776AB?logo=python)](https://www.python.org)
+
+---
+
+> ⚠️ **Important Notice**  
+> This repository is an early-stage proof of concept, initiated in July 2025 as part of job interview preparation.  
+> - The codebase is under active development and may contain incomplete features or vulnerabilities.  
+
+---
+
+An AI-powered platform for analyzing medical lab documents, built to demonstrate modern full-stack development practices. This application provides document upload, OCR processing, intelligent analysis, and structured results through a responsive Angular frontend.
 
 An AI-powered platform for analyzing medical lab documents, built to demonstrate modern full-stack development practices. This application provides document upload, OCR processing, intelligent analysis, and structured results through a responsive Angular frontend.
 
@@ -257,4 +275,4 @@ This project demonstrates modern Angular 19 patterns:
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
