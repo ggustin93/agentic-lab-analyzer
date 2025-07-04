@@ -78,6 +78,14 @@ class ChutesAILabAgent(LabInsightAgent):
     async def analyze_text(self, raw_text: str) -> HealthInsights:
         logger.info(f"Analyzing text with Chutes.AI agent using model {settings.CHUTES_AI_MODEL}")
         
+        # --- AGENT RESPONSIBILITY DISCLAIMER ---
+        # For this MVP, this agent is responsible for BOTH data extraction and insight generation.
+        # In a production system, these would ideally be two separate, specialized agents:
+        # 1. Extraction Agent: Focuses only on parsing the raw text into the structured `data` object.
+        # 2. Insight Agent: Receives the structured `data` and generates `summary`, `key_findings`, and `recommendations`.
+        # This consolidated approach is a deliberate choice for simplicity in the MVP.
+        # --- END DISCLAIMER ---
+        
         system_prompt = """
         You are a highly specialized AI agent for analyzing blood test lab reports and give expert and actionable medical interpretation. 
         Your response MUST be a JSON object following this exact structure:
@@ -87,46 +95,36 @@ class ChutesAILabAgent(LabInsightAgent):
                 "document_type": "type",
                 "test_date": null
             },
-            "summary": "Brief summary",
-            "key_findings": ["finding1", "finding2"],
-            "recommendations": ["rec1", "rec2"],
+            "summary": "Brief summary of the most important findings.",
+            "key_findings": ["Clear, concise finding about a specific marker or group of markers.", "Another key finding."],
+            "recommendations": ["Actionable recommendation related to a key finding.", "Another recommendation."],
             "disclaimer": "This analysis is for educational purposes only. It is not a substitute for professional medical advice. Always consult a qualified healthcare provider."
         }
 
-        CRITICAL COLUMN IDENTIFICATION RULES:
+        **ANALYSIS AND INSIGHTS GENERATION RULES:**
+        1.  **Analyze All Markers**: Review every marker provided in the lab report.
+        2.  **Identify Abnormalities**: Compare each marker's `value` against its `reference_range`. Identify and prioritize any values that are outside of the normal range (high or low).
+        3.  **Generate Summary**: Write a brief, neutral summary (2-3 sentences) of the overall results, highlighting whether they are generally normal or if there are noteworthy findings.
+        4.  **Create Key Findings**: For each abnormal marker, create a clear, concise "key finding". If all markers are normal, state that clearly as the key finding.
+            - *Example (Abnormal)*: "The Creatinine level (1.4 mg/dL) is slightly elevated above the reference range (0.70 - 1.30 mg/dL), which may suggest further evaluation of kidney function is needed."
+            - *Example (Normal)*: "All markers, including Hemoglobin and Glucose, are within their respective normal reference ranges."
+        5.  **Provide Recommendations**: For each key finding about an abnormal value, provide a sensible, non-prescriptive recommendation.
+            - *Example*: "Discuss the elevated Creatinine level with a healthcare provider to determine if further testing is necessary."
+        
+        **CRITICAL COLUMN IDENTIFICATION AND DATA EXTRACTION RULES:**
         When analyzing lab reports with multiple columns, carefully distinguish between:
 
-        1. REFERENCE RANGES ("Normes" / "Normal" / "Reference"):
-           - These are the CURRENT medical standard ranges for each test
-           - Usually appear as ranges like "13.0 - 17.5", "< 100", "> 40", "Normal: 65-100"
-           - Extract EXACTLY as they appear in the document
-           - Use these for the "reference_range" field
+        1.  **REFERENCE RANGES ("Normes" / "Normal" / "Reference"):**
+            - These are the CURRENT medical standard ranges.
+            - Extract EXACTLY as they appear for the `reference_range` field.
 
-        2. PREVIOUS RESULTS ("Résultats Antérieurs" / "Previous Results"):
-           - These are HISTORICAL test values from past dates
-           - Often include dates like "17/05/2021" or specific values from previous tests
-           - DO NOT use these as reference ranges
-           - These are patient's own historical data, not medical standards
+        2.  **PREVIOUS RESULTS ("Résultats Antérieurs" / "Previous Results"):**
+            - These are HISTORICAL test values.
+            - **DO NOT** use these as reference ranges. They are the patient's past data, not medical standards.
 
-        3. CURRENT VALUES ("Résultats" / "Results"):
-           - These are the CURRENT test results being analyzed
-           - Use these for the "value" field
-
-        EXAMPLES OF CORRECT EXTRACTION:
-        - If you see: "Hémoglobine | 16.1 | g/dL | 13.0 - 17.5 | 16.3"
-          Extract: {"marker": "Hémoglobine", "value": "16.1", "unit": "g/dL", "reference_range": "13.0 - 17.5"}
-          NOT: {"reference_range": "16.3"} (this is a previous result!)
-
-        - If you see: "VGM | 91.9 | μm³ | 80.0 - 98.0 | 95.2"
-          Extract: {"marker": "VGM", "value": "91.9", "unit": "μm³", "reference_range": "80.0 - 98.0"}
-          NOT: {"reference_range": "95.2"} (this is a previous result!)
-
-        REFERENCE RANGE QUALITY REQUIREMENTS:
-        - Preserve exact formatting from the document (including spaces, dashes, symbols)
-        - Common formats: "3.5-5.0", "< 2.0", "> 40", "Normal: 65-100", "40.0 - 54.0"
-        - If unclear or missing, return empty string for reference_range
-        - Never guess or approximate ranges
-        - Never use previous results as reference ranges
+        3.  **CURRENT VALUES ("Résultats" / "Results"):**
+            - These are the CURRENT test results being analyzed.
+            - Use these for the `value` field.
         """
 
         try:
@@ -192,6 +190,9 @@ class ChutesAILabAgent(LabInsightAgent):
                 recommendations=parsed_data.get("recommendations", []),
                 disclaimer=parsed_data.get("disclaimer", "This analysis is for educational purposes only. Always consult a qualified healthcare provider.")
             )
+            
+            if not insights.summary or insights.summary == "No summary available" or not insights.key_findings:
+                logger.warning("AI response was valid JSON but contained no summary or key findings.")
             
             if not insights.data.markers:
                 logger.warning("Chutes.AI returned a valid structure but no markers were extracted.")

@@ -1,0 +1,30 @@
+# Git
+.git/
+.github/
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# Environment files
+.env
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS-specific
+.DS_Store
+
+# Test files
+tests/
+Dockerfile.backend
+README.md 
