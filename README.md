@@ -115,24 +115,24 @@ The application will be accessible at the following endpoints:
 *   **Backend API Docs**: `http://localhost:8000/docs` (Swagger UI)
 
 ## Roadmap
-This project serves as a strong foundation. Future development could focus on enhancing its architecture, scalability, and user experience.
+The following roadmap outlines areas for future exploration, focusing on applying advanced architectural patterns and strengthening the system's robustness and scalability.
 
 *   **Architecture & Refactoring:**
-    *   Continue applying Angular 19+ patterns across the entire codebase, such as refactoring any remaining RxJS-based state management to fully embrace Signals for a more unified and performant state model.
-    *   Perform bundle analysis to identify further optimization opportunities for lazy-loaded modules and improve initial load times.
+    *   **Evolve to Hexagonal Architecture:** Formally refactor the backend by defining clear "Ports" (the application's core use cases) and "Adapters" (for external technologies like Supabase or Mistral). This would further decouple the core domain logic from infrastructure concerns.
+    *   **Introduce Domain-Driven Design (DDD) Concepts:** Clarify the "Bounded Contexts" within the application (e.g., `DocumentIngestion` vs. `AnalysisInterpretation`). Define Aggregates (like a `Document` with its `AnalysisResult`) and Value Objects to create a more expressive and resilient domain model.
+
+*   **Frontend Modernization & DX:**
+    *   **Full Signal Adoption:** Complete the migration from RxJS-based patterns to a fully signal-based architecture for state management and component communication, creating a more modern and unified codebase.
+    *   **Evaluate Testing Frameworks:** Assess migrating the unit testing framework from Karma/Jasmine to **Jest**. This could offer performance improvements, an integrated "all-in-one" framework with superior mocking, and a better overall developer experience.
 
 *   **Backend & Scalability:**
-    *   Transition from SSE to WebSockets for more robust, bi-directional real-time communication.
-    *   To improve fault tolerance, decouple the processing pipeline by introducing a message queue (e.g., RabbitMQ, Redis) between the API and the AI agents.
-    *   Integrate local, on-device models (e.g., `docTR` for OCR, Ollama for analysis) as alternative agents to offer users an offline-first, privacy-focused option.
+    *   **Integrate Local, Privacy-Focused Agents:** Implement alternative agents using on-device models like **`docTR`** for OCR and **`Ollama`** for LLM analysis, offering users a fully offline and private processing option.
+    *   **Decouple with a Message Queue:** To improve fault tolerance, replace the direct call to the `DocumentProcessor` with a message queue (e.g., RabbitMQ, Redis Streams). This would allow the API to return immediately after upload, with background workers consuming jobs from the queue.
+    *   **Introduce a Caching Layer:** Implement a caching strategy (e.g., using Redis) for external API calls to AI services to reduce latency and costs.
 
 *   **Security & Observability:**
-    *   Implement full user authentication (e.g., via Supabase Auth) and apply Row-Level Security (RLS) to ensure data privacy and tenant isolation.
-    *   Enhance monitoring with structured logging and integrate with an observability platform (e.g., Prometheus/Grafana) to track application performance and errors.
-
-*   **User Experience & Accessibility:**
-    *   Conduct a full accessibility (a11y) audit and implement improvements to ensure the application is usable by the widest possible audience, adhering to WCAG standards.
-    *   Enhance global error handling to provide more context-aware and user-friendly feedback for API or processing failures.
+    *   **Implement Authentication:** Integrate a full authentication system (e.g., Supabase Auth) and apply Row-Level Security (RLS) to the database to ensure data privacy.
+    *   **Enhance Monitoring:** Implement structured logging and integrate with an observability platform (e.g., Prometheus/Grafana) to track application performance, errors, and system health.
 
 ## License
 This project is for personal, non-commercial use only. Please see the [LICENSE.md](LICENSE.md) file for more details.
