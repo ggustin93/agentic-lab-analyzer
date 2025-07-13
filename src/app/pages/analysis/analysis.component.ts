@@ -7,7 +7,7 @@ import { DisclaimerBannerComponent } from '../../components/disclaimer-banner/di
 import { DataTableComponent } from '../../components/data-table/data-table.component';
 import { AiInsightsComponent } from '../../components/ai-insights/ai-insights.component';
 import { DocumentStatus, DocumentViewModel, HealthDocument } from '../../models/document.model';
-import { PdfViewerModule } from 'ng2-pdf-viewer'; // <-- REPLACE WITH THIS IMPORT
+import { PdfViewerModule } from 'ng2-pdf-viewer';
 
 type AnalysisView = 'data' | 'insights' | 'source';
 
@@ -33,7 +33,7 @@ type AnalysisView = 'data' | 'insights' | 'source';
     DisclaimerBannerComponent, 
     DataTableComponent, 
     AiInsightsComponent,
-    PdfViewerModule // <-- REPLACE WITH THIS IN THE IMPORTS ARRAY
+    PdfViewerModule
   ],
   template: `
     <div class="min-h-screen bg-gray-50">
