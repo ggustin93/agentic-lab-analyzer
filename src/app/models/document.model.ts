@@ -28,9 +28,7 @@ export interface HealthDocument {
 
 // Wrapper class that provides camelCase accessors for snake_case properties
 export class DocumentViewModel {
-  constructor(private document: HealthDocument) {
-    console.log('Creating DocumentViewModel with document:', document);
-  }
+  constructor(private readonly document: HealthDocument) {}
 
   get id(): string { return this.document.id; }
   get filename(): string { return this.document.filename; }
@@ -45,7 +43,6 @@ export class DocumentViewModel {
     return this.document.raw_text; 
   }
   get extractedData(): HealthMarker[] | undefined { 
-    console.log('Getting extractedData:', this.document.extracted_data);
     return this.document.extracted_data; 
   }
   get aiInsights(): string | undefined { return this.document.ai_insights; }
