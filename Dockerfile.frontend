@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Install Chrome dependencies for testing
 RUN apk add --no-cache \
@@ -20,8 +20,8 @@ WORKDIR /app
 # Copy package files first (for better caching)
 COPY package*.json ./
 
-# Install dependencies with exact versions
-RUN npm ci
+# Generate fresh package-lock.json and install dependencies
+RUN npm install
 
 # Install Angular CLI and build packages globally
 RUN npm install -g @angular/cli@19.0.0 @angular-devkit/build-angular@19.0.0 @angular/build@19.0.0
