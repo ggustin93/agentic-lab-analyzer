@@ -20,6 +20,22 @@ This project is a full-stack application designed to analyze medical lab documen
 *   **Containerized Environment**: The entire application stack is containerized using Docker and Docker Compose for easy setup.
 *   **Automated Testing & CI/CD**: Includes a multi-layered testing strategy and a GitHub Actions workflow for continuous integration.
 
+## Preview
+
+Here's a visual overview of the application's key features:
+
+### 1. Document Upload & Dashboard
+![Dashboard and Upload Interface](assets/screenshot-1.png)
+*The main dashboard with drag-and-drop document upload functionality. Users can upload PDF or image files of medical lab reports and view their analysis history.*
+
+### 2. Lab Data Analysis Results
+![Lab Data Analysis](assets/screenshot-2.png)
+*Structured extraction of lab values with automatic highlighting of out-of-range results. The interface shows extracted markers, values, units, and reference ranges in an easy-to-read format.*
+
+### 3. AI-Generated Medical Insights
+![Medical Insights Report](assets/screenshot-3.png)
+*AI-powered analysis providing summaries, key findings, and recommendations based on the extracted lab data. The insights tab offers human-readable interpretations of the medical data.*
+
 ## Architecture Overview
 
 The application is built on a decoupled architecture, separating the frontend, backend, and data services.
