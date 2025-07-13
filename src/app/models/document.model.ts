@@ -17,6 +17,7 @@ export interface HealthDocument {
   readonly uploaded_at: string;
   readonly status: DocumentStatus;
   readonly processed_at?: string;
+  readonly public_url?: string; // <-- ADD THIS
   readonly raw_text?: string;
   readonly extracted_data?: HealthMarker[];
   readonly ai_insights?: string;
@@ -39,7 +40,10 @@ export class DocumentViewModel {
   get title(): string { return this.document.filename; }
   get uploadedAt(): string { return this.document.uploaded_at; }
   get processedAt(): string | undefined { return this.document.processed_at; }
-  get rawText(): string | undefined { return this.document.raw_text; }
+  get public_url(): string | undefined { return this.document.public_url; } // <-- ADD THIS
+  get rawText(): string | undefined { 
+    return this.document.raw_text; 
+  }
   get extractedData(): HealthMarker[] | undefined { 
     console.log('Getting extractedData:', this.document.extracted_data);
     return this.document.extracted_data; 
@@ -87,6 +91,7 @@ export interface AnalysisResultResponse {
   readonly status: DocumentStatus;
   readonly filename: string;
   readonly uploaded_at: string;
+  readonly public_url?: string; // <-- ADD THIS
   readonly raw_text?: string;
   readonly extracted_data?: RawHealthMarker[]; // Use the new raw interface
   readonly ai_insights?: string;

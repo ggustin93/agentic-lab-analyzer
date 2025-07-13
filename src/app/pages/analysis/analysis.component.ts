@@ -7,6 +7,7 @@ import { DisclaimerBannerComponent } from '../../components/disclaimer-banner/di
 import { DataTableComponent } from '../../components/data-table/data-table.component';
 import { AiInsightsComponent } from '../../components/ai-insights/ai-insights.component';
 import { DocumentStatus, DocumentViewModel, HealthDocument } from '../../models/document.model';
+import { PdfViewerModule } from 'ng2-pdf-viewer'; // <-- REPLACE WITH THIS IMPORT
 
 /**
  * Analysis Page Component - Angular 19 Modernized
@@ -29,7 +30,8 @@ import { DocumentStatus, DocumentViewModel, HealthDocument } from '../../models/
     RouterModule, 
     DisclaimerBannerComponent, 
     DataTableComponent, 
-    AiInsightsComponent
+    AiInsightsComponent,
+    PdfViewerModule // <-- REPLACE WITH THIS IN THE IMPORTS ARRAY
   ],
   template: `
     <div class="min-h-screen bg-gray-50">
@@ -192,6 +194,20 @@ import { DocumentStatus, DocumentViewModel, HealthDocument } from '../../models/
                 </svg>
                 Medical Insights
               </button>
+              <!-- ADD THE NEW BUTTON -->
+              <button
+                (click)="setView('source')"
+                [ngClass]="{
+                  'bg-blue-600 text-white shadow-sm': currentView() === 'source',
+                  'text-gray-600 hover:text-gray-900 hover:bg-gray-50': currentView() !== 'source'
+                }"
+                class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-all duration-200 ease-in-out min-w-[140px] justify-center"
+              >
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+                Source Document
+              </button>
             </div>
           </div>
 
@@ -205,6 +221,22 @@ import { DocumentStatus, DocumentViewModel, HealthDocument } from '../../models/
             <!-- AI Insights View -->
             @if (currentView() === 'insights') {
               <app-ai-insights [insights]="aiInsights()"></app-ai-insights>
+            }
+
+            <!-- ADD THE PDF VIEWER VIEW -->
+            @if (currentView() === 'source') {
+              <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+                <pdf-viewer
+                  [src]="publicUrl()"
+                  [render-text]="true"
+                  [original-size]="false"
+                  [fit-to-page]="true"
+                  [zoom]="1.0"
+                  [show-all]="true"
+                  style="display: block; width: 100%; height: 80vh;"
+                  >
+                </pdf-viewer>
+              </div>
             }
           </div>
 
@@ -255,7 +287,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    */
   readonly document = signal<DocumentViewModel | null | undefined>(undefined);
   readonly showRawData = signal<boolean>(false);
-  readonly currentView = signal<'data' | 'insights'>('data');
+  // UPDATE THIS LINE
+  readonly currentView = signal<'data' | 'insights' | 'source'>('data');
 
   /**
    * Computed Signals for Derived UI States
@@ -296,9 +329,16 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const doc = this.document();
     return doc?.aiInsights || '';
   });
+  
+  // ADD THIS NEW COMPUTED SIGNAL
+  readonly publicUrl = computed(() => {
+    const doc = this.document();
+    // The public_url should come from the document data fetched from the API
+    return doc?.public_url || '';
+  });
   readonly rawText = computed(() => {
     const doc = this.document();
-    return doc?.rawText || '';
+    return doc?.rawText || 'No raw text available';
   });
 
   /**
@@ -376,6 +416,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
                 uploaded_at: response.uploaded_at,
                 status: response.status,
                 processed_at: response.processed_at,
+                public_url: response.public_url, // <-- ADD THIS MAPPING
                 raw_text: response.raw_text,
                 extracted_data: response.extracted_data || [], // Ensure this is never undefined
                 ai_insights: response.ai_insights,
@@ -427,7 +468,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    * Simple signal updates for UI state management.
    * Demonstrates clean separation between state and actions.
    */
-  setView(view: 'data' | 'insights'): void {
+  // UPDATE THE setView METHOD
+  setView(view: 'data' | 'insights' | 'source'): void {
     this.currentView.set(view);
   }
 
