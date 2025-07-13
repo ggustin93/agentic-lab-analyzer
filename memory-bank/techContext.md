@@ -126,6 +126,11 @@ constructor() {
 - **Containerization:** Docker & Docker Compose
 - **Version Control:** Git & GitHub
 - **CI/CD:** GitHub Actions
+- **Development Scripts:** Organized in `scripts/` directory with utilities for:
+  - Development environment startup (`dev-start.sh`)
+  - Dependency management (`fix-dependencies.sh`, `check-deps.js`)
+  - Docker resource management (`docker-cleanup.sh`, `docker-monitor.sh`)
+  - Project validation and testing (`validate-setup.sh`, `test-docker.sh`)
 
 ## 4. Technical Constraints
 

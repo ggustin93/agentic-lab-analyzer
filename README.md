@@ -81,7 +81,42 @@ npm run test:all:docker
 
 # Open the Cypress UI for interactive E2E testing
 npm run e2e:open
+
+# Validate project setup and dependencies
+npm run dev:validate
+
+# Test Docker build and services
+npm run docker:test
 ```
+
+## Development Scripts
+
+This project includes various utility scripts in the `scripts/` directory for development, testing, and maintenance:
+
+```bash
+# Start development environment with automatic cleanup
+npm run dev:start
+
+# Validate project setup and dependencies  
+npm run dev:validate
+
+# Check for dependency conflicts
+npm run dev:check-deps
+
+# Fix npm dependency issues
+npm run dev:fix-deps
+
+# Clean up Docker resources
+npm run docker:clean
+
+# Monitor Docker resource usage
+npm run docker:monitor
+
+# Test Docker builds and connectivity
+npm run docker:test
+```
+
+See `scripts/README.md` for detailed information about each script.
 
 ## Local Development
 Follow these steps to run the application on your local machine.
@@ -110,7 +145,9 @@ SUPABASE_BUCKET_NAME=health-docs # or your chosen bucket name
 #### 2. Fix Dependencies (if needed)
 If you encounter Docker dependency issues, run the fix script:
 ```bash
-./fix-dependencies.sh
+./scripts/fix-dependencies.sh
+# or
+npm run dev:fix-deps
 ```
 
 #### 3. Launch
