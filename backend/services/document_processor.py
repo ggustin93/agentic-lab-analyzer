@@ -13,7 +13,11 @@ from models.document_models import Document, AnalysisResult, HealthMarkerDB
 from models.health_models import HealthInsights
 from agents.base import OCRExtractorAgent, LabInsightAgent
 from .mistral_ocr_service import MistralOCRService
-from .chutes_ai_agent import ChutesAILabAgent
+# REMOVE the old ChutesAILabAgent import
+# from .chutes_ai_agent import ChutesAILabAgent 
+# ADD the new agent imports
+from .extraction_agent import ExtractionAgent
+from .insight_agent import InsightAgent
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +48,10 @@ class DocumentProcessor:
     def __init__(self):
         """Initialize the document processor with OCR and AI analysis agents."""
         self.ocr_agent: OCRExtractorAgent = MistralOCRService()
-        self.insight_agent: LabInsightAgent = ChutesAILabAgent()
+        # REPLACE the single insight_agent with two specialized agents
+        # self.insight_agent: LabInsightAgent = ChutesAILabAgent()
+        self.extraction_agent = ExtractionAgent()
+        self.insight_agent = InsightAgent()
         self.supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
         self.bucket_name = settings.SUPABASE_BUCKET_NAME
     
@@ -217,7 +224,7 @@ class DocumentProcessor:
                 if analysis_result.data:
                     analysis_data = analysis_result.data
                     doc["processed_at"] = self._format_iso_date(analysis_data.get("created_at"))
-                    doc["raw_text"] = analysis_data.get("raw_text")
+                    doc["raw_text"] = analysis_data.get("raw_text") or doc_result.data.get("raw_text")
                     doc["ai_insights"] = analysis_data.get("insights")
                     
                     # Fetch and format health markers
@@ -241,6 +248,7 @@ class DocumentProcessor:
                     # Handle case where document is 'complete' but analysis record is missing
                     doc["extracted_data"] = []
                     doc["ai_insights"] = "Analysis data not found."
+                    doc["raw_text"] = doc_result.data.get("raw_text")
             
             # Ensure keys exist even if not complete
             doc.setdefault("extracted_data", [])
@@ -323,10 +331,21 @@ class DocumentProcessor:
         Returns:
             HealthInsights: Structured health insights from AI analysis
         """
-        logger.info(f"🧠 Stage 2/4: Starting AI analysis for {document_id} ({len(raw_text)} chars)")
-        self._update_processing_stage(document_id, ProcessingStage.AI_ANALYSIS, {"raw_text": raw_text})
+        # --- Stage 2a: Data Extraction ---
+        logger.info(f"🧠 Stage 2a/4: Starting Data Extraction for {document_id} ({len(raw_text)} chars)")
+        self._update_processing_stage(document_id, ProcessingStage.AI_ANALYSIS, {"raw_text": raw_text, "progress": 30})
+        extracted_data = await self.extraction_agent.extract_data(raw_text)
+        if not extracted_data.markers:
+            logger.warning(f"ExtractionAgent returned no markers for document {document_id}")
+            # Optional: you could raise an error here if no markers is a critical failure
+            # raise ValueError("Extraction process yielded no health markers")
+
+        # --- Stage 2b: Insight Generation ---
+        logger.info(f"🧠 Stage 2b/4: Starting Insight Generation for {document_id}")
+        self._update_processing_stage(document_id, ProcessingStage.AI_ANALYSIS, {"progress": 50})
+        insights_result = await self.insight_agent.generate_insights(extracted_data)
         
-        return await self.insight_agent.analyze_text(raw_text)
+        return insights_result
 
     async def _execute_save_stage(self, document_id: str, filename: str, raw_text: str, insights_result: HealthInsights):
         """
@@ -517,9 +536,14 @@ class DocumentProcessor:
             document_id: ID of the document
             analysis_data: Structured analysis data to save
         """
+        # Get the raw_text from documents table to include it in analysis_results
+        doc_result = self.supabase.table("documents").select("raw_text").eq("id", document_id).maybe_single().execute()
+        raw_text = doc_result.data.get("raw_text") if doc_result.data else None
+        
         # Save analysis result record
         analysis_payload = {
             "document_id": document_id,
+            "raw_text": raw_text,
             "structured_data": analysis_data,
             "insights": self._format_insights_as_markdown(HealthInsights(**analysis_data))
         }
