@@ -8,17 +8,13 @@ This project is a full-stack application designed to analyze medical lab documen
 
 ## Features
 
-*   **Document Upload & OCR**: Accepts PDF and image files, extracting text using an OCR agent.
-*   **Multi-Stage Processing**: An asynchronous backend orchestrates a pipeline for OCR, AI analysis, and data persistence.
-*   **Real-Time Feedback**: The user interface provides live status updates on document processing via Server-Sent Events (SSE).
-*   **Structured Data Extraction**: An AI agent parses raw text into structured JSON, identifying health markers, values, units, and reference ranges.
-*   **AI-Generated Insights**: A second agent generates a human-readable summary, key findings, and general recommendations from the structured data.
-*   **Integrated PDF Viewer**: Built-in document viewer for verification and cross-reference with extracted data.
-*   **Out-of-Range Highlighting**: Lab results automatically highlight values that fall outside their reference range using clinical tolerances.
-*   **Document Management**: Provides a history of all analyses with options to delete documents or retry failed processing jobs.
-*   **Resilient LaTeX Rendering**: Intelligent mathematical unit rendering with fallback for OCR-corrupted expressions.
-*   **Containerized Environment**: The entire application stack is containerized using Docker and Docker Compose for easy setup.
-*   **Automated Testing & CI/CD**: Includes a multi-layered testing strategy and a GitHub Actions workflow for continuous integration.
+*   **Secure Document Upload**: Upload PDF or image files of lab reports via drag-and-drop.
+*   **Automated Data Extraction**: Uses OCR and AI to parse text and identify markers, values, and reference ranges.
+*   **Out-of-Range Highlighting**: Automatically flags lab values that fall outside standard ranges for quick review.
+*   **AI-Generated Insights**: Provides clear, human-readable summaries and interpretations of the lab data.
+*   **Integrated Document Viewer**: Allows for easy cross-referencing between the extracted data and the original document.
+*   **Persistent Analysis History**: View, manage, and re-process previously analyzed documents.
+*   **Real-Time Processing Updates**: The UI reflects the document's analysis status in real time using Server-Sent Events (SSE).
 
 ## Preview
 
