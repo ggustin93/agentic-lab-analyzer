@@ -12,7 +12,14 @@
     "e2e:docker": "docker-compose run --rm cypress",
     "e2e:open": "cypress open",
     "test:all:docker": "npm run test:docker && docker-compose run --rm cypress",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "dev:start": "./scripts/dev-start.sh",
+    "dev:validate": "./scripts/validate-setup.sh",
+    "dev:check-deps": "node scripts/check-deps.js",
+    "dev:fix-deps": "./scripts/fix-dependencies.sh",
+    "docker:clean": "./scripts/docker-cleanup.sh",
+    "docker:monitor": "./scripts/docker-monitor.sh",
+    "docker:test": "./scripts/test-docker.sh"
   },
   "dependencies": {
     "@angular/animations": "^19.0.0",
