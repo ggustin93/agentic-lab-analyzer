@@ -2,17 +2,17 @@
 
 ## 1. Backend Architecture
 
-- **Agent-Based Design:** The backend uses a protocol-based (interface) design for its AI agents (`chutes_ai_agent.py`, `mistral_ocr_service.py`). This is a key pattern for maintainability, allowing different agent implementations to be swapped without changing the core business logic in the `DocumentProcessor`.
-- **Decoupled Orchestration:** The `DocumentProcessor` service acts as an orchestrator, coordinating the workflow (OCR, analysis, data persistence) but remaining decoupled from the specific AI services that perform the work.
-- **Secure Configuration:** Pydantic's `Settings` model is used to manage all secrets and configuration from environment variables, ensuring no sensitive data is exposed in the codebase.
-- **Layered API:** The FastAPI application exposes a versioned RESTful API (`/api/v1/...`) for clear separation and future scalability.
+- **Chain of Responsibility Pattern:** The backend implements specialized agents (`ExtractionAgent`, `InsightAgent`) following a clear separation of concerns. Each agent has a single responsibility: data extraction vs insight generation.
+- **Decoupled Orchestration:** The `DocumentProcessor` orchestrates the workflow through a two-stage pipeline (2a: Data Extraction → 2b: Insight Generation) while remaining decoupled from specific AI implementations.
+- **Secure Configuration:** Pydantic's `Settings` model manages configuration with externalized CORS settings and proper environment variable handling.
+- **Layered API:** FastAPI exposes a versioned RESTful API (`/api/v1/...`) with configurable CORS origins for production flexibility.
 
 ## 2. Frontend Architecture
 
-- **Smart Service/Presentational Component:** The frontend follows a pattern where "smart" services (`DocumentAnalysisService`) contain the business logic, state management, and API interactions. "Presentational" components (`data-table`, `document-list`) are responsible only for displaying data and emitting user events, making them highly reusable and testable.
-- **RxJS for State Management:** A centralized, RxJS-based service (`DocumentAnalysisService`) manages the application's state. This provides a reactive data flow that is efficient and scales well for this project's scope without requiring a larger state management library like NgRx or Redux.
-- **OnPush Change Detection:** Components are configured with `OnPush` change detection strategy to optimize performance by reducing Angular's rendering cycles. **Enhanced with OnChanges lifecycle hooks for precise progress tracking and debugging.**
-- **Lazy Loading:** Feature modules, particularly the `analysis` page, are lazy-loaded to minimize the initial bundle size and improve the First Contentful Paint (FCP) time.
+- **Signals-First Architecture:** Angular 19 signals power reactive state management with `DocumentStore` providing centralized state. Business logic is properly separated into services (`LabMarkerInfoService`) away from presentation components.
+- **Three-View Analysis Pattern:** Analysis component supports data table, insights, and integrated PDF viewer via tabbed interface, enabling comprehensive document verification.
+- **OnPush Change Detection:** Components use `OnPush` strategy with signal-based inputs for optimal performance.
+- **Resilient LaTeX Rendering:** `MathFormulaComponent` intelligently detects when LaTeX rendering is needed vs plain text display, with automatic cleanup of AI-generated formatting artifacts.
 
 ## 3. Progress Tracking System
 
@@ -49,8 +49,8 @@
 
 ## 5. DevOps
 
-- **Containerization:** The entire application stack (frontend, backend) is containerized using Docker and managed with Docker Compose. This ensures a consistent, reproducible development and deployment environment for any developer.
-- **CI/CD Pipeline:** A GitHub Actions workflow automates linting and testing for both frontend and backend on every push, enforcing code quality and preventing regressions.
+- **Containerization:** Application stack uses Docker with Node 20 support for Angular 19 compatibility. Automated dependency fixing via `fix-dependencies.sh` resolves package-lock sync issues.
+- **CI/CD Pipeline:** GitHub Actions workflow automates linting and testing for both frontend and backend on every push, enforcing code quality and preventing regressions.
 
 ## 6. Database Schema Management
 

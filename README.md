@@ -13,8 +13,10 @@ This project is a full-stack application designed to analyze medical lab documen
 *   **Real-Time Feedback**: The user interface provides live status updates on document processing via Server-Sent Events (SSE).
 *   **Structured Data Extraction**: An AI agent parses raw text into structured JSON, identifying health markers, values, units, and reference ranges.
 *   **AI-Generated Insights**: A second agent generates a human-readable summary, key findings, and general recommendations from the structured data.
-*   **Out-of-Range Highlighting**: Lab results automatically highlight values that fall outside their reference range.
+*   **Integrated PDF Viewer**: Built-in document viewer for verification and cross-reference with extracted data.
+*   **Out-of-Range Highlighting**: Lab results automatically highlight values that fall outside their reference range using clinical tolerances.
 *   **Document Management**: Provides a history of all analyses with options to delete documents or retry failed processing jobs.
+*   **Resilient LaTeX Rendering**: Intelligent mathematical unit rendering with fallback for OCR-corrupted expressions.
 *   **Containerized Environment**: The entire application stack is containerized using Docker and Docker Compose for easy setup.
 *   **Automated Testing & CI/CD**: Includes a multi-layered testing strategy and a GitHub Actions workflow for continuous integration.
 
@@ -41,10 +43,10 @@ The application is built on a decoupled architecture, separating the frontend, b
 ```
 
 #### Frontend (Angular 19)
-The frontend is built with Angular 19, utilizing signals for state management, `OnPush` change detection for performance, and a three-tier service architecture to separate concerns (API communication, state management, and business logic).
+The frontend is built with Angular 19, utilizing signals for state management, `OnPush` change detection for performance, and a three-tier service architecture to separate concerns (API communication, state management, and business logic). Features include an integrated PDF viewer and resilient LaTeX rendering for medical units.
 
 #### Backend (Python / FastAPI)
-The Python backend uses FastAPI for its asynchronous capabilities. It is designed with an agent-based orchestrator pattern, where a `DocumentProcessor` coordinates the workflow between swappable agents responsible for OCR and data analysis. This modular design allows different AI services to be integrated without altering core business logic.
+The Python backend uses FastAPI for its asynchronous capabilities. It implements a Chain of Responsibility pattern with specialized agents: `ExtractionAgent` for data parsing and `InsightAgent` for medical interpretation. The `DocumentProcessor` orchestrates the workflow between swappable agents, allowing different AI services to be integrated without altering core business logic.
 
 #### Data & Persistence (Supabase)
 Supabase provides the PostgreSQL database and file storage. Schema changes are managed through version-controlled SQL migrations located in the `supabase/migrations` directory.
@@ -53,12 +55,12 @@ Supabase provides the PostgreSQL database and file storage. Schema changes are m
 
 | Layer       | Technology                                                              |
 |-------------|-------------------------------------------------------------------------|
-| **Frontend**  | Angular 19, TypeScript, Tailwind CSS, Signals, RxJS, Cypress, Karma   |
-| **Backend**   | Python 3.11, FastAPI, Pydantic, httpx                                   |
-| **AI / ML**   | Mistral AI (for OCR), Chutes.AI (for analysis)                          |
+| **Frontend**  | Angular 19, TypeScript, Tailwind CSS, Signals, ngx-extended-pdf-viewer |
+| **Backend**   | Python 3.11, FastAPI, Pydantic, httpx, Chain of Responsibility pattern |
+| **AI / ML**   | Mistral AI (OCR), Chutes.AI (Analysis), Specialized agent architecture  |
 | **Database**  | Supabase (PostgreSQL)                                                   |
 | **Storage**   | Supabase Storage                                                        |
-| **DevOps**    | Docker, Docker Compose, GitHub Actions                                  |
+| **DevOps**    | Docker, Docker Compose, GitHub Actions, Node 20                        |
 
 ## Testing Strategy
 A multi-layered testing strategy is implemented to ensure high confidence in the application's stability, from individual functions to complete user flows.
@@ -105,7 +107,13 @@ SUPABASE_BUCKET_NAME=health-docs # or your chosen bucket name
 ```
 *Note: You will also need to set up the database schema using the files in `supabase/migrations`.*
 
-#### 2. Launch
+#### 2. Fix Dependencies (if needed)
+If you encounter Docker dependency issues, run the fix script:
+```bash
+./fix-dependencies.sh
+```
+
+#### 3. Launch
 With Docker running, start the services using Docker Compose:
 ```bash
 docker-compose up --build
