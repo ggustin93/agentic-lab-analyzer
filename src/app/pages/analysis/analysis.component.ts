@@ -9,6 +9,8 @@ import { AiInsightsComponent } from '../../components/ai-insights/ai-insights.co
 import { DocumentStatus, DocumentViewModel, HealthDocument } from '../../models/document.model';
 import { PdfViewerModule } from 'ng2-pdf-viewer'; // <-- REPLACE WITH THIS IMPORT
 
+type AnalysisView = 'data' | 'insights' | 'source';
+
 /**
  * Analysis Page Component - Angular 19 Modernized
  * 
@@ -287,8 +289,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    */
   readonly document = signal<DocumentViewModel | null | undefined>(undefined);
   readonly showRawData = signal<boolean>(false);
-  // UPDATE THIS LINE
-  readonly currentView = signal<'data' | 'insights' | 'source'>('data');
+  readonly currentView = signal<AnalysisView>('data');
 
   /**
    * Computed Signals for Derived UI States
@@ -378,16 +379,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       // The paramMap subscription in ngOnInit will handle the actual data loading
     });
 
-    // Effect for debugging document state changes
+    // Effect for document state change tracking
     effect(() => {
       const doc = this.document();
-      const status = doc?.status;
-      console.log('Document state changed:', { 
-        hasDocument: !!doc, 
-        status,
-        isLoading: this.isLoading(),
-        isComplete: this.isComplete()
-      });
+      // Track document state changes for debugging in development
+      if (doc && doc.status) {
+        // Document state has changed - could be used for analytics
+      }
     });
   }
 
@@ -402,13 +400,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
             return of(null);
           }
 
-          console.log(`[AnalysisComponent] Fetching analysis for document ID: ${id}`);
-          
           // Always fetch fresh analysis data directly from the API
           return this.documentService.getAnalysisResults(id).pipe(
             map(response => {
-              console.log('[AnalysisComponent] Direct API response:', response);
-              
               // Create a HealthDocument from the API response
               const document: HealthDocument = {
                 id: response.document_id,
@@ -425,9 +419,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
                 processing_stage: response.processing_stage
               };
               
-              console.log('[AnalysisComponent] Constructed document:', document);
-              console.log('[AnalysisComponent] Extracted data:', document.extracted_data);
-              
               return document;
             }),
             catchError((error: unknown) => {
@@ -436,22 +427,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
             })
           );
         }),
-        map(doc => {
-          console.log('[AnalysisComponent] Document data for view model:', doc);
-          return doc ? new DocumentViewModel(doc) : null;
-        })
+        map(doc => doc ? new DocumentViewModel(doc) : null)
       )
       .subscribe({
         next: (document) => {
-          console.log('[AnalysisComponent] Setting document view model:', document?.title);
-          if (document) {
-            console.log('[AnalysisComponent] Document view model created:', document.filename);
-            console.log('[AnalysisComponent] Extracted data in view model:', document.extractedData);
-          }
           this.document.set(document);
         },
         error: (error) => {
-          console.error('[AnalysisComponent] Error in subscription:', error);
+          console.error('[AnalysisComponent] Error loading document:', error);
           this.document.set(null);
         }
       });
@@ -468,8 +451,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    * Simple signal updates for UI state management.
    * Demonstrates clean separation between state and actions.
    */
-  // UPDATE THE setView METHOD
-  setView(view: 'data' | 'insights' | 'source'): void {
+  setView(view: AnalysisView): void {
     this.currentView.set(view);
   }
 
