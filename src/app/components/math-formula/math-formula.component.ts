@@ -1,3 +1,5 @@
+// src/app/components/math-formula/math-formula.component.ts
+
 import { 
   Component, 
   input, 
@@ -8,97 +10,87 @@ import {
 } from '@angular/core';
 import * as katex from 'katex';
 
-/**
- * Modern Angular 19 component for rendering KaTeX mathematical expressions
- * 
- * Key architectural decisions:
- * - Uses signals for optimal change detection and reactivity
- * - OnPush strategy reduces unnecessary render cycles
- * - Standalone component for better tree-shaking and modularity
- * - Graceful error handling preserves UX when LaTeX syntax is invalid
- */
 @Component({
   selector: 'app-math-formula',
   standalone: true,
   template: `<span #container class="math-formula"></span>`,
   styles: [`
-    :host {
-      display: inline-block;
-      line-height: 1;
-    }
-    
-    /* Error state provides visual feedback for invalid expressions */
-    .math-formula.error {
-      color: #dc3545;
-      font-family: monospace;
-      padding: 0.125rem 0.25rem;
-      background-color: #f8f9fa;
-      border-radius: 0.25rem;
-      border: 1px solid #dee2e6;
-    }
+    :host { display: inline-block; line-height: 1; }
+    .math-formula.error { color: #dc2626; font-family: monospace; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MathFormulaComponent {
-  /**
-   * Mathematical expression to render using LaTeX syntax
-   * Transform function ensures data consistency and handles edge cases
-   */
   readonly expression = input('', {
     transform: (value: string | undefined | null) => value?.trim() || ''
   });
 
-  /**
-   * Signal-based ViewChild provides type safety and eliminates null checks
-   * Required ensures the container always exists when accessed
-   */
   private readonly container = viewChild.required<ElementRef<HTMLSpanElement>>('container');
 
   constructor() {
-    /**
-     * Effect automatically tracks expression signal changes
-     * More efficient than ngOnChanges as it only monitors specific dependencies
-     * Runs automatically when expression updates, providing reactive rendering
-     */
     effect(() => this.renderExpression());
   }
 
-  /**
-   * Renders mathematical expression using KaTeX library
-   * Implements defensive programming with fallback for rendering errors
-   */
   private renderExpression(): void {
     const element = this.container().nativeElement;
-    // Strip LaTeX delimiters ($) for compatibility with KaTeX render method
-    const cleanExpression = this.expression().replace(/\$/g, '');
-    
-    // Reset previous error state for clean rendering
+    const rawExpression = this.expression();
     element.classList.remove('error');
-    
-    // Handle empty expressions efficiently
-    if (!cleanExpression) {
-      element.textContent = '';
+
+    if (!rawExpression) {
+      element.innerHTML = '';
       return;
     }
 
-    try {
-      // KaTeX configuration optimized for inline mathematical expressions
-      katex.render(cleanExpression, element, {
-        throwOnError: false,  // Prevents crashes on invalid syntax
-        displayMode: false,   // Inline mode for better text flow integration
-        output: 'html',       // HTML output for better performance than MathML
-        strict: false,        // Allow LaTeX extensions for broader compatibility
-      });
-    } catch (error) {
-      /**
-       * Graceful degradation strategy:
-       * 1. Log error for debugging without breaking user experience
-       * 2. Display original expression as plain text
-       * 3. Apply error styling to indicate rendering failure
-       */
-      console.warn('KaTeX rendering failed:', error);
-      element.textContent = cleanExpression;
-      element.classList.add('error');
+    // NEW: Intelligent normalization logic
+    const { normalized, requiresLatex } = this.normalizeLatexString(rawExpression);
+
+    if (requiresLatex) {
+      try {
+        katex.render(normalized, element, {
+          throwOnError: false,
+          displayMode: false,
+          strict: false,
+        });
+      } catch (error) {
+        console.warn('KaTeX rendering failed, falling back to plain text:', { rawExpression, error });
+        element.textContent = rawExpression;
+        element.classList.add('error');
+      }
+    } else {
+      // If no LaTeX is needed, just render as plain text.
+      element.textContent = normalized;
     }
+  }
+
+  /**
+   * Normalizes an input string to be safely rendered by KaTeX.
+   * - Ensures proper LaTeX delimiters ($...$).
+   * - Decides if LaTeX rendering is even necessary.
+   */
+  private normalizeLatexString(expr: string): { normalized: string; requiresLatex: boolean } {
+    if (!expr) {
+      return { normalized: '', requiresLatex: false };
+    }
+    
+    // Remove "mathrm" commands from AI, as they are often unnecessary and can cause issues.
+    let cleanedExpr = expr.replace(/\\mathrm/g, '').replace(/[{}]/g, '');
+
+    // Check if the expression contains characters that require LaTeX rendering.
+    const latexChars = ['\\', '^', '_'];
+    const needsLatex = latexChars.some(char => cleanedExpr.includes(char));
+
+    if (!needsLatex) {
+      // It's likely plain text, return as is.
+      return { normalized: cleanedExpr, requiresLatex: false };
+    }
+
+    // It needs LaTeX, so ensure it is properly delimited.
+    // Strip any existing dollars to prevent double-wrapping, then wrap it cleanly.
+    cleanedExpr = cleanedExpr.replace(/\$/g, '');
+    
+    return {
+      normalized: cleanedExpr, // Give KaTeX the pure expression without delimiters
+      requiresLatex: true
+    };
   }
 }

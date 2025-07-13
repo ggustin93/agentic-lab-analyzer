@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { HealthMarker } from '../models/document.model'; // Make sure HealthMarker is imported
 
 export interface LabMarkerInfo {
   name: string;
@@ -561,5 +562,89 @@ export class LabMarkerInfoService {
            range.includes('failed') ||
            range.includes('error') ||
            range.trim().length < 2; // Very short ranges like single characters
+  }
+
+  // ADD THIS NEW METHOD
+  public getMarkerClinicalStatus(item: HealthMarker): 'normal' | 'borderline' | 'abnormal' {
+    const comparisonRange = this.getComparisonReferenceRange(item);
+    
+    if (!comparisonRange || !item.value) {
+      return 'normal';
+    }
+
+    const value = parseFloat(item.value);
+    if (isNaN(value)) {
+      return 'normal';
+    }
+
+    if (comparisonRange.includes('...') || 
+        comparisonRange.includes('depending') || 
+        comparisonRange.length < 2) {
+      return 'normal';
+    }
+
+    let match = comparisonRange.match(/^(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+(?:\.\d+)?)$/);
+    if (match) {
+        const min = parseFloat(match[1]);
+        const max = parseFloat(match[2]);
+        const rangeSize = max - min;
+        const tolerance = rangeSize * 0.25;
+
+        if (value >= min && value <= max) return 'normal';
+        if (value < min) return (min - value) <= tolerance ? 'borderline' : 'abnormal';
+        if (value > max) return (value - max) <= tolerance ? 'borderline' : 'abnormal';
+    }
+
+    match = comparisonRange.match(/^[<≤]\s*(\d+(?:\.\d+)?)$/);
+    if (match) {
+        const max = parseFloat(match[1]);
+        const tolerance = max * 0.25;
+        if (value < max) return 'normal';
+        return (value - max) <= tolerance ? 'borderline' : 'abnormal';
+    }
+    
+    match = comparisonRange.match(/^<(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/);
+    if (match) {
+        const firstNum = parseFloat(match[1]);
+        const secondNum = parseFloat(match[2]);
+        const actualMax = Math.max(firstNum, secondNum);
+        const tolerance = actualMax * 0.25;
+        if (value < actualMax) return 'normal';
+        return (value - actualMax) <= tolerance ? 'borderline' : 'abnormal';
+    }
+
+    match = comparisonRange.match(/^[>≥]\s*(\d+(?:\.\d+)?)$/);
+    if (match) {
+        const min = parseFloat(match[1]);
+        const tolerance = min * 0.25;
+        if (value > min) return 'normal';
+        return (min - value) <= tolerance ? 'borderline' : 'abnormal';
+    }
+
+    match = comparisonRange.match(/(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+(?:\.\d+)?)/);
+    if (match) {
+        const min = parseFloat(match[1]);
+        const max = parseFloat(match[2]);
+        const rangeSize = max - min;
+        const tolerance = rangeSize * 0.25;
+        if (value >= min && value <= max) return 'normal';
+        if (value < min) return (min - value) <= tolerance ? 'borderline' : 'abnormal';
+        if (value > max) return (value - max) <= tolerance ? 'borderline' : 'abnormal';
+    }
+
+    return 'normal';
+  }
+
+  // ADD THIS HELPER METHOD AND MAKE IT PRIVATE
+  private getComparisonReferenceRange(item: HealthMarker): string | null {
+    const ocrRange = item.reference_range || '';
+    if (!ocrRange || ocrRange.trim() === '') {
+      return null;
+    }
+    const cleanedRange = ocrRange.replace(/\$/g, '').replace(/\\[a-zA-Z]+/g, '').replace(/[{}]/g, '').trim();
+    if (!cleanedRange || cleanedRange.trim() === '') {
+      return null;
+    }
+    return cleanedRange.trim();
   }
 } 
