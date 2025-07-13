@@ -219,6 +219,7 @@ export class DocumentAnalysisService implements OnDestroy {
           uploaded_at: analysis.uploaded_at,
           status: analysis.status,
           processed_at: analysis.processed_at,
+          public_url: analysis.public_url, // <-- ADD THIS MAPPING
           raw_text: analysis.raw_text,
           extracted_data: analysis.extracted_data || [], // Ensure this is never undefined
           ai_insights: analysis.ai_insights,

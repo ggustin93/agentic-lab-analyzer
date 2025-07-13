@@ -27,6 +27,7 @@
     "@types/katex": "^0.16.7",
     "katex": "^0.16.22",
     "marked": "^15.0.12",
+    "ng2-pdf-viewer": "^10.3.1",
     "ngx-markdown": "19.0.0",
     "rxjs": "~7.8.0",
     "tippy.js": "^6.3.7",
