@@ -11,7 +11,7 @@ describe('DataTableComponent (Pragmatic MVP Test)', () => {
 
   beforeEach(async () => {
     // Create a spy object for the LabMarkerInfoService
-    const spy = jasmine.createSpyObj('LabMarkerInfoService', ['getMarkerInfo', 'getFallbackReferenceRange']);
+    const spy = jasmine.createSpyObj('LabMarkerInfoService', ['getMarkerInfo', 'getFallbackReferenceRange', 'getMarkerClinicalStatus']);
 
     await TestBed.configureTestingModule({
       imports: [DataTableComponent], // Standalone components are imported directly
@@ -26,8 +26,20 @@ describe('DataTableComponent (Pragmatic MVP Test)', () => {
     mockLabMarkerService = TestBed.inject(LabMarkerInfoService) as jasmine.SpyObj<LabMarkerInfoService>;
 
     // Setup default spy returns
-    mockLabMarkerService.getMarkerInfo.and.returnValue(null);
-    mockLabMarkerService.getFallbackReferenceRange.and.returnValue(null);
+    mockLabMarkerService.getMarkerInfo.and.returnValue(undefined);
+    mockLabMarkerService.getFallbackReferenceRange.and.returnValue(undefined);
+    
+    // Setup dynamic clinical status based on marker values
+    mockLabMarkerService.getMarkerClinicalStatus.and.callFake((item: HealthMarker) => {
+      // Simple logic to determine status based on marker name for testing
+      if (item.marker === 'Glucose' && item.value === '150') return 'abnormal';
+      if (item.marker === 'Potassium' && item.value === '3.0') return 'abnormal';
+      if (item.marker === 'Cholesterol' && item.value === '200') return 'borderline';
+      if (item.marker === 'Hemoglobin' && item.value === '13.5') return 'borderline';
+      if (item.marker === 'High1' && item.value === '10.0') return 'abnormal';
+      if (item.marker === 'Low1' && item.value === '2.0') return 'abnormal';
+      return 'normal'; // Default to normal
+    });
   });
 
   // THE SINGLE MOST IMPORTANT COMPONENT TEST: Highlighting logic
@@ -172,6 +184,23 @@ describe('DataTableComponent (Pragmatic MVP Test)', () => {
 
   // Test the value status logic directly
   it('should correctly determine value status based on reference ranges', () => {
+    // Override the service method to return proper clinical status based on the test cases
+    mockLabMarkerService.getMarkerClinicalStatus.and.callFake((item: HealthMarker) => {
+      const value = parseFloat(item.value);
+      const range = item.reference_range;
+      
+      if (!range || !range.includes('4.0 - 6.0')) {
+        return 'unknown';
+      }
+      
+      // Test range is 4.0 - 6.0
+      if (value >= 4.0 && value <= 6.0) {
+        return 'normal';
+      } else {
+        return 'abnormal';
+      }
+    });
+
     // Test normal values
     const normalMarker: HealthMarker = { marker: 'Test', value: '5.0', reference_range: '4.0 - 6.0' };
     expect(component.getValueStatus(normalMarker)).toBe('normal');
