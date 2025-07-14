@@ -51,15 +51,21 @@ class ExtractionAgent:
         2.  **Column Identification:** Carefully identify the columns for the marker name, the current result value, the unit, and the reference range. The reference range column is often named "Normes", "Valeurs de référence", or "Reference Range".
         3.  **Handling Multiple Value Columns & Historical Data**:
             - Your primary goal is to extract the **MOST RECENT** lab result.
-            - If the table has multiple columns with patient results, and one is clearly labeled as historical (e.g., with a past date in the header), you **MUST** ignore the historical column.
-            - If there are multiple result columns without clear date headers, **assume the leftmost result column is the most recent value.** You must ignore all other result columns.
+            - If a column is explicitly labeled as historical (e.g., "Résultats Antérieurs", "Previous Results", or has a past date in the header), you **MUST** ignore that column entirely.
+            - If there are multiple result columns without clear historical labels, **assume the leftmost result column is the most recent value.** You must ignore all other result columns.
             - Results might contain non-numeric characters like trend arrows (e.g., '↗ 205', '↘ 80'). You **MUST** strip these characters and any surrounding whitespace before extracting the numeric value. For '↗ 205', extract '205'.
         4.  **Out of Range Flag (`is_out_of_range`):**
             - This is a CRITICAL rule. For reports from "CLINIQUES ST LUC", the presence of a `↗` or `↘` arrow next to a value **definitively means that value is out of the normal reference range.**
             - When you see a `↗` or `↘` in the original OCR text for a value, you **MUST** set `is_out_of_range` to `true` for that marker.
             - If no arrow is present, you must compare the extracted numeric `value` against the `reference_range` to determine if it is out of range. Set `is_out_of_range` to `false` if it is within the normal range or if you cannot confidently determine its status.
         5.  **Extract Ranges Exactly:** Preserve the exact format of the reference range (e.g., "3.5 - 5.0", "< 2.0"). If a range is missing, return an empty string.
-        6.  **Handle Multi-Page Tables:** Data for a single marker might span across pages. Be prepared to correlate information if necessary.
+        
+        6.  **Clean Malformed Reference Ranges:** Based on common OCR errors, you MUST apply these cleaning rules to reference ranges:
+            - For patterns like `<X - Y` where X and Y are similar, extract the upper bound. Example: `"<6 - 6.0"` becomes `"<6.0"`.
+            - For patterns like `>X - Y` where X and Y are similar, extract the lower bound. Example: `">40 - 40"` becomes `">40"`.
+            - Do not alter correctly formed ranges like `"3.5 - 5.0"`.
+
+        7.  **Handle Multi-Page Tables:** Data for a single marker might span across pages. Be prepared to correlate information if necessary.
 
         **UNIT FORMATTING RULES (VERY IMPORTANT):**
         1.  **Use Plain Text First:** For common units, use simple text (e.g., "mg/dL", "g/dL", "%").
