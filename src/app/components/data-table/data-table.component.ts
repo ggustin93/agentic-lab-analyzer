@@ -280,9 +280,13 @@ export class DataTableComponent {
   getRowBackgroundColor(item: HealthMarker): string {
     const status = this.getValueStatus(item);
     switch (status) {
-      case 'borderline': return '#fef3c7'; // amber-100 (light yellow)
-      case 'abnormal': return '#fee2e2';   // red-100
-      default: return 'transparent';
+      case 'critical':
+      case 'abnormal': 
+        return '#fee2e2';   // red-100
+      case 'borderline': 
+        return '#fef3c7'; // amber-100 (light yellow)
+      default: 
+        return 'transparent';
     }
   }
 
