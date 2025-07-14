@@ -1,8 +1,9 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any, Union
 from enum import Enum
 from uuid import UUID, uuid4
 from datetime import datetime
+from pydantic import field_validator
 
 # Database Schema Models
 class Document(BaseModel):
@@ -49,9 +50,17 @@ class DocumentStatus(str, Enum):
 
 class HealthMarker(BaseModel):
     marker: str
-    value: str
+    value: Union[str, float, int]
     unit: Optional[str] = None
-    referenceRange: Optional[str] = None
+    reference_range: Optional[str] = Field(None, alias='referenceRange')
+
+    @field_validator('value', mode='before')
+    @classmethod
+    def validate_value(cls, v: Any) -> str:
+        return str(v)
+
+class HealthDataExtraction(BaseModel):
+    markers: List[HealthMarker]
 
 class DocumentResponse(BaseModel):
     document_id: str
