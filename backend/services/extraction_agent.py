@@ -35,7 +35,11 @@ class ExtractionAgent:
         }
 
         **CRITICAL EXTRACTION RULES:**
-        1.  **Identify Columns:** Carefully distinguish between "Results" (current values), "Reference Ranges", and "Previous Results". NEVER use previous results as reference ranges.
+        1.  **Column Identification Logic:** Your primary goal is to find the reference range for the current result.
+            - **PRIORITIZE** columns explicitly named "Reference Range", "Normes", "Valeurs de référence", or similar as the source for the `reference_range` field.
+            - The current result value is usually in the first numerical column after the marker name.
+            - **AGGRESSIVELY IGNORE** any columns that contain dates in their headers (e.g., "Résultats Antérieurs", "25/08/2021", "17/05/2021", "Previous Results"). These columns are historical data and are NOT reference ranges.
+            - **NEVER** use values from a historical/dated column as the reference range. If you cannot find a clear reference range column, it is better to leave the `reference_range` field empty.
         2.  **Extract Ranges Exactly:** Preserve the exact format of the reference range (e.g., "3.5 - 5.0", "< 2.0"). If a range is missing, return an empty string for that field.
         3.  **Clean Malformed OCR:** Fix common OCR errors. For example:
             - "<6 - 6.0" should become "<6.0"
