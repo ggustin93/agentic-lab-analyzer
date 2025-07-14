@@ -13,8 +13,7 @@ from models.document_models import Document, AnalysisResult, HealthMarkerDB
 from models.health_models import HealthInsights
 from agents.base import OCRExtractorAgent, LabInsightAgent
 from .mistral_ocr_service import MistralOCRService
-# REMOVE the old ChutesAILabAgent import
-# from .chutes_ai_agent import ChutesAILabAgent 
+# Updated to use new specialized agents instead of the old monolithic ChutesAILabAgent 
 # ADD the new agent imports
 from .extraction_agent import ExtractionAgent
 from .insight_agent import InsightAgent
@@ -92,31 +91,87 @@ class DocumentProcessor:
 
     async def delete_document(self, document_id: str) -> bool:
         """
-        Delete a document and all associated data from storage and database.
+        Delete a document and all associated data with improved error handling.
+        
+        Implements a resilient deletion process that handles various failure scenarios:
+        - Partial deletion recovery
+        - Storage file cleanup retries
+        - Database constraint handling
+        - Detailed error logging
         
         Args:
             document_id: ID of document to delete
             
         Returns:
-            bool: True if deletion successful, False if document not found
+            bool: True if deletion successful, False if document not found or deletion failed
         """
-        try:
-            document_data = self._load_document_data(document_id)
-            if not document_data:
-                logger.warning(f"Document {document_id} not found for deletion")
-                return False
+        max_retries = 3
+        retry_delay = 1.0
+        
+        for attempt in range(max_retries):
+            try:
+                document_data = self._load_document_data(document_id)
+                if not document_data:
+                    logger.warning(f"Document {document_id} not found for deletion")
+                    return False
 
-            # Delete in correct order to respect foreign key constraints
-            await self._delete_analysis_data(document_id)
-            await self._delete_storage_file(document_data.get("storage_path"))
-            self._delete_document_record(document_id)
+                logger.info(f"Starting deletion attempt {attempt + 1}/{max_retries} for document {document_id}")
 
-            logger.info(f"Successfully deleted document {document_id}")
-            return True
+                # Step 1: Delete analysis data (handles foreign key constraints)
+                try:
+                    await self._delete_analysis_data(document_id)
+                    logger.info(f"Successfully deleted analysis data for document {document_id}")
+                except Exception as e:
+                    logger.warning(f"Analysis data deletion failed for {document_id}: {e}")
+                    if attempt == max_retries - 1:
+                        # If this is the last attempt, continue anyway as analysis data might not exist
+                        logger.info(f"Continuing deletion despite analysis data error on final attempt")
 
-        except Exception as e:
-            logger.error(f"Error deleting document {document_id}: {e}", exc_info=True)
-            return False
+                # Step 2: Delete storage file (with retry logic)
+                storage_path = document_data.get("storage_path")
+                if storage_path:
+                    try:
+                        await self._delete_storage_file_with_retry(storage_path)
+                        logger.info(f"Successfully deleted storage file for document {document_id}")
+                    except Exception as e:
+                        logger.warning(f"Storage file deletion failed for {document_id}: {e}")
+                        if attempt == max_retries - 1:
+                            # Continue with document record deletion even if storage file fails
+                            logger.warning(f"Continuing deletion despite storage file error on final attempt")
+
+                # Step 3: Delete document record (most critical step)
+                try:
+                    self._delete_document_record(document_id)
+                    logger.info(f"Successfully deleted document record for {document_id}")
+                    
+                    # If we reach here, deletion was successful
+                    logger.info(f"Successfully deleted document {document_id} on attempt {attempt + 1}")
+                    return True
+                    
+                except Exception as e:
+                    logger.error(f"Critical: Document record deletion failed for {document_id}: {e}")
+                    if attempt < max_retries - 1:
+                        logger.info(f"Retrying deletion in {retry_delay} seconds...")
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                        continue
+                    else:
+                        # Final attempt failed
+                        logger.error(f"All deletion attempts failed for document {document_id}")
+                        return False
+
+            except Exception as e:
+                logger.error(f"Unexpected error during deletion attempt {attempt + 1} for document {document_id}: {e}", exc_info=True)
+                if attempt < max_retries - 1:
+                    logger.info(f"Retrying deletion in {retry_delay} seconds...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                else:
+                    logger.error(f"All deletion attempts failed for document {document_id}")
+                    return False
+
+        return False
 
     async def retry_document_processing(self, document_id: str) -> bool:
         """
@@ -408,6 +463,34 @@ class DocumentProcessor:
                 logger.info(f"Deleted file from storage: {storage_path}")
             except Exception as e:
                 logger.warning(f"Failed to delete storage file {storage_path}: {e}")
+
+    async def _delete_storage_file_with_retry(self, storage_path: str):
+        """
+        Delete file from storage with retry logic for resilience.
+        
+        Args:
+            storage_path: Path to the file in storage
+            
+        Raises:
+            Exception: If all retry attempts fail
+        """
+        max_retries = 3
+        retry_delay = 1.0
+        
+        for attempt in range(max_retries):
+            try:
+                self.supabase.storage.from_(self.bucket_name).remove([storage_path])
+                logger.info(f"Deleted file from storage: {storage_path}")
+                return
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logger.warning(f"Storage file deletion attempt {attempt + 1} failed for {storage_path}: {e}")
+                    logger.info(f"Retrying storage file deletion in {retry_delay} seconds...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    logger.error(f"All storage file deletion attempts failed for {storage_path}: {e}")
+                    raise
 
     # === PRIVATE DATABASE METHODS ===
     

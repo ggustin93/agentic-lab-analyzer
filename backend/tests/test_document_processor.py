@@ -188,4 +188,155 @@ async def test_smoke_test():
         
         # A minimal assertion
         assert processor is not None
+
+@pytest.mark.asyncio
+async def test_delete_document_success():
+    """Test successful document deletion with retry logic."""
+    with patch('services.document_processor.create_client') as mock_create_client:
+        # Setup mock Supabase client
+        mock_supabase_client = MagicMock(spec=Client)
+        mock_create_client.return_value = mock_supabase_client
+        
+        # Mock storage client
+        mock_storage_client = MagicMock()
+        mock_supabase_client.storage.from_.return_value = mock_storage_client
+        mock_storage_client.remove.return_value = None
+        
+        # Mock table operations
+        mock_table_instance = MagicMock()
+        mock_supabase_client.table.return_value = mock_table_instance
+        
+        # Mock document loading
+        mock_select_builder = MagicMock()
+        mock_table_instance.select.return_value = mock_select_builder
+        mock_select_builder.eq.return_value = mock_select_builder
+        mock_select_builder.maybe_single.return_value = mock_select_builder
+        
+        # Mock document data with storage path
+        mock_document_data = {"id": "test_doc_id", "storage_path": "test_path.pdf"}
+        load_return_mock = AsyncMock()
+        load_return_mock.return_value = MagicMock(data=mock_document_data)
+        mock_select_builder.execute = load_return_mock
+        
+        # Mock deletion operations
+        mock_delete_builder = MagicMock()
+        mock_table_instance.delete.return_value = mock_delete_builder
+        mock_delete_builder.eq.return_value = mock_delete_builder
+        mock_delete_builder.execute = AsyncMock()
+        
+        # Create processor instance
+        processor = DocumentProcessor()
+        processor.supabase = mock_supabase_client
+        
+        # Mock the helper methods
+        processor._load_document_data = MagicMock(return_value=mock_document_data)
+        processor._delete_analysis_data = AsyncMock()
+        processor._delete_document_record = MagicMock()
+        
+        # Test successful deletion
+        result = await processor.delete_document("test_doc_id")
+        
+        # Assertions
+        assert result is True
+        processor._delete_analysis_data.assert_called_once_with("test_doc_id")
+        processor._delete_document_record.assert_called_once_with("test_doc_id")
+        mock_storage_client.remove.assert_called_once_with(["test_path.pdf"])
+
+@pytest.mark.asyncio
+async def test_delete_document_with_retry():
+    """Test document deletion with retry logic on failure."""
+    with patch('services.document_processor.create_client') as mock_create_client:
+        # Setup mock Supabase client
+        mock_supabase_client = MagicMock(spec=Client)
+        mock_create_client.return_value = mock_supabase_client
+        
+        # Mock storage client that fails first time
+        mock_storage_client = MagicMock()
+        mock_supabase_client.storage.from_.return_value = mock_storage_client
+        mock_storage_client.remove.side_effect = [Exception("Storage error"), None]  # Fail first, succeed second
+        
+        # Mock table operations
+        mock_table_instance = MagicMock()
+        mock_supabase_client.table.return_value = mock_table_instance
+        
+        # Mock document data
+        mock_document_data = {"id": "test_doc_id", "storage_path": "test_path.pdf"}
+        
+        # Create processor instance
+        processor = DocumentProcessor()
+        processor.supabase = mock_supabase_client
+        
+        # Mock the helper methods
+        processor._load_document_data = MagicMock(return_value=mock_document_data)
+        processor._delete_analysis_data = AsyncMock()
+        processor._delete_document_record = MagicMock()
+        
+        # Patch sleep to speed up test
+        with patch('asyncio.sleep'):
+            # Test deletion with retry
+            result = await processor.delete_document("test_doc_id")
+        
+        # Assertions
+        assert result is True
+        processor._delete_analysis_data.assert_called_with("test_doc_id")
+        processor._delete_document_record.assert_called_with("test_doc_id")
+        # Storage remove should be called twice (first fail, then succeed)
+        assert mock_storage_client.remove.call_count == 2
+
+@pytest.mark.asyncio
+async def test_delete_document_not_found():
+    """Test deletion of non-existent document."""
+    with patch('services.document_processor.create_client') as mock_create_client:
+        # Setup mock Supabase client
+        mock_supabase_client = MagicMock(spec=Client)
+        mock_create_client.return_value = mock_supabase_client
+        
+        # Create processor instance
+        processor = DocumentProcessor()
+        processor.supabase = mock_supabase_client
+        
+        # Mock helper method to return None (document not found)
+        processor._load_document_data = MagicMock(return_value=None)
+        
+        # Test deletion of non-existent document
+        result = await processor.delete_document("non_existent_doc")
+        
+        # Assertions
+        assert result is False
+        processor._load_document_data.assert_called_once_with("non_existent_doc")
+
+@pytest.mark.asyncio
+async def test_delete_document_max_retries_exceeded():
+    """Test deletion failure after max retries."""
+    with patch('services.document_processor.create_client') as mock_create_client:
+        # Setup mock Supabase client
+        mock_supabase_client = MagicMock(spec=Client)
+        mock_create_client.return_value = mock_supabase_client
+        
+        # Mock document data
+        mock_document_data = {"id": "test_doc_id", "storage_path": "test_path.pdf"}
+        
+        # Create processor instance
+        processor = DocumentProcessor()
+        processor.supabase = mock_supabase_client
+        
+        # Mock helper methods - document record deletion always fails
+        processor._load_document_data = MagicMock(return_value=mock_document_data)
+        processor._delete_analysis_data = AsyncMock()
+        processor._delete_document_record = MagicMock(side_effect=Exception("Database error"))
+        
+        # Mock storage deletion to succeed
+        mock_storage_client = MagicMock()
+        mock_supabase_client.storage.from_.return_value = mock_storage_client
+        mock_storage_client.remove.return_value = None
+        
+        # Patch sleep to speed up test
+        with patch('asyncio.sleep'):
+            # Test deletion with max retries exceeded
+            result = await processor.delete_document("test_doc_id")
+        
+        # Assertions
+        assert result is False
+        # Should be called 3 times (max retries)
+        assert processor._delete_document_record.call_count == 3
         assert processor.supabase is not None 

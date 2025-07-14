@@ -4,6 +4,7 @@ import { catchError, tap, map } from 'rxjs/operators';
 import { HealthDocument, DocumentStatus, UploadResponse, AnalysisResultResponse } from '../models/document.model';
 import { DocumentApiService } from './document-api.service';
 import { DocumentStore } from './document.store';
+import { ToastService } from './toast.service';
 
 /**
  * Document Analysis Service
@@ -60,6 +61,9 @@ export class DocumentAnalysisService implements OnDestroy {
   
   /** Centralized state management store */
   private readonly store = inject(DocumentStore);
+  
+  /** Toast notification service */
+  private readonly toastService = inject(ToastService);
 
   // ===========================================
   // STATE MANAGEMENT VIA STORE
@@ -256,17 +260,24 @@ export class DocumentAnalysisService implements OnDestroy {
    * Remove Document Workflow
    * 
    * Removes a document from both the backend database and frontend state.
-   * Ensures proper cleanup and error handling.
+   * Ensures proper cleanup, error handling, and user feedback via toast notifications.
    * 
    * @param documentId - ID of document to remove
    */
   removeDocument(documentId: string): void {
     console.log('🗑️ Removing document from database:', documentId);
     
+    // Get document name for better user feedback
+    const document = this.store.documents().find(d => d.id === documentId);
+    const documentName = document?.filename || 'Document';
+    
     // Call backend API to delete the document from database
     this.apiService.deleteDocument(documentId).subscribe({
       next: () => {
         console.log('✅ Document successfully deleted from database:', documentId);
+        
+        // Show success toast notification
+        this.toastService.success(`${documentName} has been successfully deleted.`, 4000);
         
         // Only remove from frontend state if backend deletion succeeded
         this.store.removeDocument(documentId);
@@ -284,11 +295,17 @@ export class DocumentAnalysisService implements OnDestroy {
           },
           error: (error) => {
             console.warn('⚠️ Failed to refresh document list after deletion:', error);
+            this.toastService.warning('Document deleted but failed to refresh list. Please refresh the page.', 6000);
           }
         });
       },
       error: (error) => {
         console.error('❌ Failed to delete document from database:', documentId, error);
+        
+        // Show error toast notification
+        this.toastService.error(`Failed to delete ${documentName}: ${error.message || 'Unknown error'}`, 6000);
+        
+        // Also update store error state for other UI components
         this.store.setError(`Failed to delete document: ${error.message || 'Unknown error'}`);
       }
     });
