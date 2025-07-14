@@ -4,29 +4,41 @@ import httpx
 from config.settings import settings
 from models.health_models import HealthDataExtraction
 from services.json_utils import safe_json_parse, parse_date
+import json
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
 class ExtractionAgent:
-    def __init__(self):
-        self.client = httpx.AsyncClient(
-            base_url=settings.CHUTES_AI_ENDPOINT,
-            headers={
-                "Authorization": f"Bearer {settings.CHUTES_AI_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            timeout=60.0
-        )
-        # For extraction, a smaller, faster model is often sufficient and more cost-effective.
-        # We'll use the same model for now, but this architecture allows for easy swapping.
-        self.model = settings.CHUTES_AI_MODEL 
+    """Agent specialized in extracting structured data from OCR text using Mistral AI."""
 
-    async def extract_data(self, raw_text: str) -> HealthDataExtraction:
+    def __init__(self):
+        """Initializes the ExtractionAgent."""
+        self.client = httpx.AsyncClient(
+            base_url="https://api.mistral.ai/v1",
+            headers={"Authorization": f"Bearer {settings.MISTRAL_API_KEY}"},
+            timeout=120
+        )
+        self.model = "mistral-large-latest"
+        logger.info(f"ExtractionAgent initialized with model: {self.model}")
+
+    async def extract_data(self, structured_ocr_data: Dict) -> HealthDataExtraction:
         logger.info(f"Extracting structured data with model {self.model}")
 
         system_prompt = """
-        You are a highly specialized data extraction AI. Your ONLY task is to extract health markers from raw text and return a structured JSON object. You MUST NOT generate summaries, findings, or recommendations.
+        You are a hyper-specialized data extraction AI. Your task is to parse a JSON object from an OCR service and extract health markers from the markdown content within it.
 
+        **INPUT FORMAT:**
+        You will receive a JSON object from the Mistral OCR API. It contains a list of pages, and each page has a 'markdown' field with the content.
+        Example:
+        {
+          "pages": [
+            { "index": 0, "markdown": "| Marker | Value | Reference |\\n|---|---|---|\\n| Hemoglobin | 14.5 | 13.0-17.5 |" },
+            { "index": 1, "markdown": "| Platelets | 250 | 150-450 |" }
+          ]
+        }
+
+        **OUTPUT FORMAT:**
         Your response MUST be a JSON object following this exact structure:
         {
             "markers": [{"marker": "name", "value": "value", "unit": "unit", "reference_range": "range"}],
@@ -35,32 +47,24 @@ class ExtractionAgent:
         }
 
         **CRITICAL EXTRACTION RULES:**
-        1.  **Column Identification Logic:** Your primary goal is to find the reference range for the current result.
-            - **PRIORITIZE** columns explicitly named "Reference Range", "Normes", "Valeurs de référence", or similar as the source for the `reference_range` field.
-            - The current result value is usually in the first numerical column after the marker name.
-            - **AGGRESSIVELY IGNORE** any columns that contain dates in their headers (e.g., "Résultats Antérieurs", "25/08/2021", "17/05/2021", "Previous Results"). These columns are historical data and are NOT reference ranges.
-            - **NEVER** use values from a historical/dated column as the reference range. If you cannot find a clear reference range column, it is better to leave the `reference_range` field empty.
-        2.  **Extract Ranges Exactly:** Preserve the exact format of the reference range (e.g., "3.5 - 5.0", "< 2.0"). If a range is missing, return an empty string for that field.
-        3.  **Clean Malformed OCR:** Fix common OCR errors. For example:
-            - "<6 - 6.0" should become "<6.0"
-            - ">40 - 40" should become ">40"
-            - "3.5 - 5.0" should remain "3.5 - 5.0" (this is correct)
-        4.  **Value and Unit:** Extract the marker's value and unit into their respective fields.
+        1.  **Parse the Markdown:** Accurately parse the markdown tables in the `markdown` field of each page. The table structure is your primary source of truth for associating values with their correct columns.
+        2.  **Column Identification:** Carefully identify the columns for the marker name, the current result value, the unit, and the reference range. The reference range column is often named "Normes", "Valeurs de référence", or "Reference Range".
+        3.  **Ignore Historical Data:** Aggressively ignore any columns that represent historical data. These often have dates in their headers (e.g., "Résultats Antérieurs", "25/08/2021"). These are NOT reference ranges.
+        4.  **Extract Ranges Exactly:** Preserve the exact format of the reference range (e.g., "3.5 - 5.0", "< 2.0"). If a range is missing, return an empty string.
+        5.  **Handle Multi-Page Tables:** Data for a single marker might span across pages. Be prepared to correlate information if necessary.
 
         **UNIT FORMATTING RULES (VERY IMPORTANT):**
         1.  **Use Plain Text First:** For common units, use simple text (e.g., "mg/dL", "g/dL", "%").
-        2.  **Use Unicode for Special Characters:** For Greek letters, use the actual Unicode character. GOOD: "/μL", BAD: "/\\mu L".
+        2.  **Use Unicode for Special Characters:** For Greek letters, use the actual Unicode character. GOOD: "/μL", BAD: "/\\muL".
         3.  **Use ^ for Powers:** For exponents, use the caret symbol. GOOD: "10^3/mm^3", BAD: "10³/mm³".
-        4.  **DO NOT** use LaTeX commands like `\mathrm`, `\mu`, or delimiters like `$`. The frontend will handle formatting.
-        
-        **Examples of CORRECT unit formatting:**
-        - "mmol/L"
-        - "mg/dL"
-        - "%"
-        - "/μL"
-        - "10^6/mm^3"
+        4.  **DO NOT** use LaTeX commands or `$` delimiters.
+
+        Now, analyze the provided OCR JSON and extract the data.
         """
         
+        # Convert the structured OCR data dict to a JSON string for the prompt
+        ocr_json_string = json.dumps(structured_ocr_data, indent=2)
+
         try:
             response = await self.client.post(
                 "/chat/completions",
@@ -68,7 +72,7 @@ class ExtractionAgent:
                     "model": self.model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"Extract data from this text:\n\n{raw_text}"}
+                        {"role": "user", "content": f"Extract data from this OCR JSON output:\n\n{ocr_json_string}"}
                     ],
                     "response_format": {"type": "json_object"}
                 }
