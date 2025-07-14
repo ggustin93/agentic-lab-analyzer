@@ -206,6 +206,13 @@ export class DocumentAnalysisService implements OnDestroy {
    * @returns Observable<AnalysisResultResponse> - Detailed analysis results
    */
   getAnalysisResults(documentId: string): Observable<AnalysisResultResponse> {
+    // Defensive programming - validate document ID
+    if (!documentId || documentId === 'undefined' || documentId === 'null' || documentId.trim() === '') {
+      console.error('❌ Invalid document ID provided to getAnalysisResults:', documentId);
+      this.store.setError('Invalid document ID provided');
+      return throwError(() => new Error('Invalid document ID: Cannot fetch analysis results'));
+    }
+
     console.log('🔍 Fetching analysis results for:', documentId);
     
     this.store.setAnalysisLoading(true);
@@ -265,6 +272,13 @@ export class DocumentAnalysisService implements OnDestroy {
    * @param documentId - ID of document to remove
    */
   removeDocument(documentId: string): void {
+    // Defensive programming - validate document ID
+    if (!documentId || documentId === 'undefined' || documentId === 'null' || documentId.trim() === '') {
+      console.error('❌ Invalid document ID provided to removeDocument:', documentId);
+      this.toastService.error('Cannot delete document: Invalid document ID', 5000);
+      return;
+    }
+
     console.log('🗑️ Removing document from database:', documentId);
     
     // Get document name for better user feedback
