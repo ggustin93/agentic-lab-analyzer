@@ -4,8 +4,7 @@ Supports cloud (Chutes.ai) and local (Ollama) AI services with easy switching
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List # <-- ADD THIS IMPORT
-
+from typing import List 
 class Settings(BaseSettings):
     """Application settings for the IBA MVP (Cloud-First Deployment)."""
     MISTRAL_API_KEY: str
