@@ -67,8 +67,32 @@ The application is built on a decoupled architecture, separating the frontend, b
                                └───────────────────────────┘
 ```
 
+
 ### 3.2 Frontend (Angular 19)
-The frontend is built with Angular 19, utilizing signals for state management, `OnPush` change detection for performance, and a three-tier service architecture to separate concerns (API communication, state management, and business logic). Features include an integrated PDF viewer and resilient LaTeX rendering for medical units.
+
+The frontend is developed using Angular 19, leveraging recent framework features to support a modular and maintainable architecture.
+
+#### **Angular 19 Architecture**
+
+* **Signals-Based State Management**: Uses Angular signals instead of RxJS Observables to manage reactive application state and data flow, in line with Angular’s current reactive paradigm.
+* **Optimized Change Detection**: Uses the `OnPush` strategy together with signal-based inputs to reduce unnecessary component re-renders.
+* **Modern Control Flow Syntax**: Applies the updated template syntax introduced in Angular 17+ (`@if`, `@for`), replacing legacy structural directives.
+
+#### **Three-Layered Service Architecture**
+
+Frontend services are structured into distinct layers to promote clear separation of concerns:
+
+* **DocumentApiService**: Handles all REST API communication.
+* **DocumentStore**: Manages centralized application state using Angular signals.
+* **DocumentAnalysisService**: Coordinates business logic between the API layer and the state store.
+
+#### **Key Frontend Features**
+
+* **PDF Viewer Integration**: Three-panel layout (data table, AI insights, source document) implemented with `ng2-pdf-viewer` to support document review.
+* **LaTeX Rendering Support**: `MathFormulaComponent` detects and renders LaTeX or plain text, with basic handling for formatting anomalies.
+* **Real-Time Updates via SSE**: Uses Server-Sent Events to receive live updates, including error recovery and automatic reconnection.
+* **Progress Tracking Interface**: Four-stage visual tracker (OCR → AI Analysis → Saving → Complete) with animated and color-coded indicators.
+* **Clinical Data Display**: Displays lab marker information via `LabMarkerInfoService`, including reference ranges and contextual metadata.
 
 ### 3.3 Backend (Python / FastAPI)
 The Python backend uses FastAPI for its asynchronous capabilities and implements a specialized agent architecture with clear separation of concerns:
@@ -100,10 +124,10 @@ A comprehensive, multi-layered testing strategy ensures high confidence in the a
 | Layer | Goal | Tools | Coverage & Examples |
 | :--- | :--- | :--- | :--- |
 | **Backend Unit Tests** | Validate core backend processing logic and agent behavior. | **pytest** with async support | **DocumentProcessor Tests:** Complete document lifecycle testing including upload, processing pipeline coordination, and deletion with retry logic. <br><br>**Service Tests:** JSON utilities, OCR service functionality, and database operations with comprehensive mocking. <br><br>**Agent Integration:** Validation of the specialized extraction and insight agents. |
-| **Frontend Unit Tests** | Validate individual units of code and UI components in isolation. | **Jasmine & Karma** | **Services (`DocumentAnalysisService`):** Testing the complete document lifecycle including upload, SSE updates, and deletion using `HttpClientTestingModule` for API mocking. <br><br>**Components:** Testing signal-based inputs, dynamic CSS class binding for out-of-range lab values, and UI component logic. |
-| **End-to-End (E2E) Tests** | Validate critical user flows from the user's perspective across the entire frontend application. | **Cypress** | **Happy Path Testing:** Simulating the full user journey from file upload, observing real-time processing status on the dashboard, to navigating to the final analysis page. Backend is mocked using Cypress intercepts for consistent testing. <br><br>**Edge Cases:** Empty state handling and error scenarios. |
+| **Frontend Unit Tests** | Validate individual units of code and UI components in isolation. | **Jasmine & Karma** | **Services (`DocumentAnalysisService`):** Testing the core business logic, including the entire document lifecycle (upload, SSE updates, deletion) using HttpClientTestingModule for mocking API calls. <br><br>**Components (`DataTableComponent`) :** Validating complex UI logic, such as the dynamic CSS class binding for highlighting out-of-range lab values, and testing signal-based inputs. |
+| **End-to-End (E2E) Tests** | Validate critical user flows from the user's perspective across the entire frontend application. | **Cypress** | **Happy Path Testing:** Simulating the full user journey from file upload, observing real-time processing status on the dashboard, to navigating to the final analysis page. The backend is mocked using Cypress intercepts to provide consistent API responses, allowing the frontend to be tested in isolation. <br><br>**Edge Cases:** Empty state handling and error scenarios. |
 | **Docker Integration Tests** | Validate the complete system in a containerized environment. | **Docker Compose** | **Service Integration:** Testing the interaction between all services in a production-like environment including database migrations and service connectivity. |
-| **Continuous Integration** | Automate quality assurance and prevent regressions. | **GitHub Actions** | **Automated Pipeline:** On every push to `main`, runs linting (`ESLint`), all unit tests (frontend and backend), E2E tests, and production build validation (`ng build`) to catch AOT compilation errors. |
+| **Continuous Integration** | Automate quality assurance and prevent regressions. | **GitHub Actions** | **Automated Pipeline:** On every push to `main`, runs linting (`ESLint`), all unit tests (frontend and backend), E2E tests, and production build validation (`ng build`) to catch Ahead-of-Time (AOT) compilation errors. |
 
 ### 5.1 Running Tests
 ```bash
