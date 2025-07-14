@@ -38,7 +38,7 @@ export class ToastService {
   /**
    * Show a success toast
    */
-  success(message: string, duration: number = 4000): void {
+  success(message: string, duration = 4000): void {
     this.addToast({
       id: this.generateId(),
       message,
@@ -51,7 +51,7 @@ export class ToastService {
   /**
    * Show an error toast
    */
-  error(message: string, duration: number = 6000): void {
+  error(message: string, duration = 6000): void {
     this.addToast({
       id: this.generateId(),
       message,
@@ -64,7 +64,7 @@ export class ToastService {
   /**
    * Show a warning toast
    */
-  warning(message: string, duration: number = 5000): void {
+  warning(message: string, duration = 5000): void {
     this.addToast({
       id: this.generateId(),
       message,
@@ -77,7 +77,7 @@ export class ToastService {
   /**
    * Show an info toast
    */
-  info(message: string, duration: number = 4000): void {
+  info(message: string, duration = 4000): void {
     this.addToast({
       id: this.generateId(),
       message,
