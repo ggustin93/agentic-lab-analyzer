@@ -3,7 +3,7 @@ import logging
 import httpx
 from config.settings import settings
 from models.health_models import HealthInsights, HealthDataExtraction
-from services.chutes_ai_agent import safe_json_parse
+from services.json_utils import safe_json_parse
 
 logger = logging.getLogger(__name__)
 
