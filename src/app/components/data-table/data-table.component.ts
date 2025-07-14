@@ -2,7 +2,8 @@ import { Component, ChangeDetectionStrategy, computed, input, inject, signal } f
 import { CommonModule } from '@angular/common';
 import { HealthMarker } from '../../models/document.model';
 import { MathFormulaComponent } from '../math-formula/math-formula.component';
-import { LabMarkerInfoService, LabMarkerInfo } from '../../services/lab-marker-info.service';
+import { LabMarkerInfoService } from '../../services/lab-marker-info.service';
+import { LabMarkerInfo, ClinicalStatus } from '../../models/lab-marker.model';
 import { TooltipDirective } from '../../directives/tooltip.directive';
 
 /**
@@ -59,10 +60,10 @@ export class DataTableComponent {
       return allData;
     }
     
-    // Show only borderline and abnormal values
+    // Show only borderline, abnormal, and critical values
     return allData.filter(item => {
       const status = this.getValueStatus(item);
-      return status === 'borderline' || status === 'abnormal';
+      return status === 'borderline' || status === 'abnormal' || status === 'critical';
     });
   });
 
@@ -82,7 +83,7 @@ export class DataTableComponent {
     
     const outOfRangeCount = allData.filter(item => {
       const status = this.getValueStatus(item);
-      return status === 'borderline' || status === 'abnormal';
+      return status === 'borderline' || status === 'abnormal' || status === 'critical';
     }).length;
     
     const normalCount = totalCount - outOfRangeCount;
@@ -138,8 +139,8 @@ export class DataTableComponent {
    * @param markerName - Name of the health marker
    * @returns Marker information or null if not found
    */
-  getMarkerInfo(markerName: string): LabMarkerInfo | null {
-    return this.labMarkerService.getMarkerInfo(markerName);
+  getMarkerInfo(markerName: string): LabMarkerInfo | undefined {
+    return this.labMarkerService.getMarkerInfo(markerName) || undefined;
   }
 
   /**
@@ -243,9 +244,11 @@ export class DataTableComponent {
   getValueColor(item: HealthMarker): string {
     const status = this.getValueStatus(item);
     switch (status) {
-      case 'borderline': return '#f59e0b'; // amber-500 (yellow)
+      case 'critical': return '#991b1b';   // red-800
       case 'abnormal': return '#dc2626';   // red-600
-      default: return '#16a34a';           // green-600
+      case 'borderline': return '#f59e0b'; // amber-500 (yellow)
+      case 'unknown': return '#6b7280';    // gray-500
+      default: return '#16a34a';           // green-600 (normal)
     }
   }
 
@@ -290,9 +293,9 @@ export class DataTableComponent {
    * This keeps the component clean and focused on presentation.
    * 
    * @param item - Health marker data
-   * @returns Status: 'normal' | 'borderline' | 'abnormal'
+   * @returns Status of the value
    */
-  getValueStatus(item: HealthMarker): 'normal' | 'borderline' | 'abnormal' {
+  getValueStatus(item: HealthMarker): ClinicalStatus {
     return this.labMarkerService.getMarkerClinicalStatus(item);
   }
 }
