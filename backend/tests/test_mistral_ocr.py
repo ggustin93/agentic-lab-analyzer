@@ -54,8 +54,8 @@ class TestMistralOCRService:
         with patch('services.mistral_ocr_service.magic.from_buffer') as mock_magic:
             mock_magic.return_value = "image/png"
             
-            result = mistral_service.extract_text("http://example.com/test.png")
-            assert "Extracted text from image." in result
+            result = mistral_service.extract_structured_data("http://example.com/test.png")
+            assert result["pages"][0]["markdown"] == "Extracted text from image."
             mock_requests.get.assert_called_once()
             mock_requests.post.assert_called_once()
 
@@ -79,8 +79,8 @@ class TestMistralOCRService:
         with patch('services.mistral_ocr_service.magic.from_buffer') as mock_magic:
             mock_magic.return_value = "application/pdf"
             
-            result = mistral_service.extract_text("http://example.com/test.pdf")
-            assert "Extracted text from PDF." in result
+            result = mistral_service.extract_structured_data("http://example.com/test.pdf")
+            assert result["pages"][0]["markdown"] == "Extracted text from PDF."
             mock_requests.get.assert_called_once()
             mock_requests.post.assert_called_once()
         
@@ -89,7 +89,7 @@ class TestMistralOCRService:
         with patch('services.mistral_ocr_service.settings.MISTRAL_API_KEY', new=''):
             service = MistralOCRService()
             with pytest.raises(Exception, match="Mistral OCR service not available"):
-                service.extract_text("http://example.com/fake.png")
+                service.extract_structured_data("http://example.com/fake.png")
 
     def test_get_usage_info(self, mistral_service):
         """Test the get_usage_info method."""

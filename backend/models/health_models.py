@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import datetime
 
 class HealthMarker(BaseModel):
     marker: str = Field(..., description="Name of the health marker, e.g., 'Hemoglobin'")
-    value: str = Field(..., description="The measured value as a string.")
+    value: Union[str, int, float] = Field(..., description="The measured value (numeric or string).")
     unit: Optional[str] = Field(None, description="Unit of measurement, e.g., 'g/dL'")
     reference_range: Optional[str] = Field(None, description="The normal reference range, e.g., '13.5 - 17.5'")
+    is_out_of_range: bool = Field(False, description="True if the value is outside the reference range.")
 
 class HealthDataExtraction(BaseModel):
     markers: List[HealthMarker] = Field(..., description="A list of all extracted health markers.")

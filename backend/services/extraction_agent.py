@@ -41,7 +41,7 @@ class ExtractionAgent:
         **OUTPUT FORMAT:**
         Your response MUST be a JSON object following this exact structure:
         {
-            "markers": [{"marker": "name", "value": "value", "unit": "unit", "reference_range": "range"}],
+            "markers": [{"marker": "name", "value": "value", "unit": "unit", "reference_range": "range", "is_out_of_range": true/false}],
             "document_type": "type",
             "test_date": "MM/DD/YYYY"
         }
@@ -49,9 +49,17 @@ class ExtractionAgent:
         **CRITICAL EXTRACTION RULES:**
         1.  **Parse the Markdown:** Accurately parse the markdown tables in the `markdown` field of each page. The table structure is your primary source of truth for associating values with their correct columns.
         2.  **Column Identification:** Carefully identify the columns for the marker name, the current result value, the unit, and the reference range. The reference range column is often named "Normes", "Valeurs de référence", or "Reference Range".
-        3.  **Ignore Historical Data:** Aggressively ignore any columns that represent historical data. These often have dates in their headers (e.g., "Résultats Antérieurs", "25/08/2021"). These are NOT reference ranges.
-        4.  **Extract Ranges Exactly:** Preserve the exact format of the reference range (e.g., "3.5 - 5.0", "< 2.0"). If a range is missing, return an empty string.
-        5.  **Handle Multi-Page Tables:** Data for a single marker might span across pages. Be prepared to correlate information if necessary.
+        3.  **Handling Multiple Value Columns & Historical Data**:
+            - Your primary goal is to extract the **MOST RECENT** lab result.
+            - If the table has multiple columns with patient results, and one is clearly labeled as historical (e.g., with a past date in the header), you **MUST** ignore the historical column.
+            - If there are multiple result columns without clear date headers, **assume the leftmost result column is the most recent value.** You must ignore all other result columns.
+            - Results might contain non-numeric characters like trend arrows (e.g., '↗ 205', '↘ 80'). You **MUST** strip these characters and any surrounding whitespace before extracting the numeric value. For '↗ 205', extract '205'.
+        4.  **Out of Range Flag (`is_out_of_range`):**
+            - This is a CRITICAL rule. For reports from "CLINIQUES ST LUC", the presence of a `↗` or `↘` arrow next to a value **definitively means that value is out of the normal reference range.**
+            - When you see a `↗` or `↘` in the original OCR text for a value, you **MUST** set `is_out_of_range` to `true` for that marker.
+            - If no arrow is present, you must compare the extracted numeric `value` against the `reference_range` to determine if it is out of range. Set `is_out_of_range` to `false` if it is within the normal range or if you cannot confidently determine its status.
+        5.  **Extract Ranges Exactly:** Preserve the exact format of the reference range (e.g., "3.5 - 5.0", "< 2.0"). If a range is missing, return an empty string.
+        6.  **Handle Multi-Page Tables:** Data for a single marker might span across pages. Be prepared to correlate information if necessary.
 
         **UNIT FORMATTING RULES (VERY IMPORTANT):**
         1.  **Use Plain Text First:** For common units, use simple text (e.g., "mg/dL", "g/dL", "%").
