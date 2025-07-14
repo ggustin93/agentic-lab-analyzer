@@ -111,6 +111,22 @@ class DatabaseManager:
             logger.error(f"Error marking document {document_id} as failed: {e}", exc_info=True)
             raise
     
+    def update_document_raw_text(self, document_id: str, raw_text: str) -> None:
+        """
+        Update the raw_text field for a document.
+        
+        Args:
+            document_id: ID of the document to update
+            raw_text: The extracted raw text to save
+        """
+        try:
+            self.supabase.table("documents").update({"raw_text": raw_text}).eq("id", document_id).execute()
+            logger.info(f"Updated raw_text for document {document_id}")
+        except Exception as e:
+            logger.error(f"Error updating raw_text for {document_id}: {e}", exc_info=True)
+            # We don't re-raise here as this is not a critical failure
+            pass
+
     def update_document_table(self, document_id: str, data: Dict) -> None:
         """
         Update main documents table with processing status and metadata.
@@ -125,10 +141,6 @@ class DatabaseManager:
             "progress": data.get("progress"),
             "processing_stage": data.get("processing_stage")
         }
-
-        # Include raw_text during OCR stage
-        if "raw_text" in data:
-            doc_payload["raw_text"] = data["raw_text"]
 
         # Set processed timestamp for completed documents
         if data["status"] == "complete":

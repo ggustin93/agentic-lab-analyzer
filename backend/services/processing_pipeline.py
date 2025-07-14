@@ -75,13 +75,13 @@ class ProcessingPipeline:
             logger.info(f"🚀 Starting async processing pipeline for document {document_id}")
             
             # Stage 1: OCR Extraction
-            raw_text = await self._execute_ocr_stage(document_id, file_url)
+            structured_ocr_data = await self._execute_ocr_stage(document_id, file_url)
             
             # Stage 2: AI Analysis (Data Extraction + Insights)
-            insights_result = await self._execute_analysis_stage(document_id, raw_text)
+            insights_result = await self._execute_analysis_stage(document_id, structured_ocr_data)
             
             # Stage 3: Save Results
-            await self._execute_save_stage(document_id, filename, raw_text, insights_result)
+            await self._execute_save_stage(document_id, filename, structured_ocr_data, insights_result)
             
             logger.info(f"✅ Successfully completed processing pipeline for document {document_id}")
             
@@ -90,7 +90,7 @@ class ProcessingPipeline:
             self.db_manager.mark_document_error(document_id, str(e))
             raise
     
-    async def _execute_ocr_stage(self, document_id: str, file_url: str) -> str:
+    async def _execute_ocr_stage(self, document_id: str, file_url: str) -> Dict:
         """
         Execute OCR extraction stage with progress tracking.
         
@@ -99,41 +99,45 @@ class ProcessingPipeline:
             file_url: URL to the document file
             
         Returns:
-            str: Extracted text from the document
+            Dict: The structured JSON response from the OCR service.
             
         Raises:
-            ValueError: If OCR extraction yields no text
+            ValueError: If OCR extraction yields no data
         """
         logger.info(f"📄 Stage 1/4: Starting OCR extraction for {document_id}")
         self.db_manager.update_processing_stage(document_id, ProcessingStage.OCR_EXTRACTION)
         
-        raw_text = self.ocr_agent.extract_text(file_url)
-        if not raw_text or not raw_text.strip():
-            raise ValueError("OCR process yielded no text")
+        structured_ocr_data = self.ocr_agent.extract_structured_data(file_url)
+        if not structured_ocr_data or not structured_ocr_data.get('pages'):
+            raise ValueError("OCR process yielded no pages or data")
         
-        logger.info(f"✅ OCR extraction completed for {document_id}: {len(raw_text)} characters")
-        return raw_text
+        # Log raw text for debugging purposes
+        raw_text_for_db = "".join([page.get('markdown', '') for page in structured_ocr_data.get('pages', [])])
+        self.db_manager.update_document_raw_text(document_id, raw_text_for_db)
+
+        logger.info(f"✅ OCR extraction completed for {document_id}")
+        return structured_ocr_data
     
-    async def _execute_analysis_stage(self, document_id: str, raw_text: str) -> HealthInsights:
+    async def _execute_analysis_stage(self, document_id: str, structured_ocr_data: Dict) -> HealthInsights:
         """
         Execute AI analysis stage with progress tracking.
         
         Args:
             document_id: ID of the document being processed
-            raw_text: Extracted text content from OCR stage
+            structured_ocr_data: The structured JSON response from the OCR service.
             
         Returns:
             HealthInsights: Structured health insights from AI analysis
         """
         # Stage 2a: Data Extraction
-        logger.info(f"🧠 Stage 2a/4: Starting Data Extraction for {document_id} ({len(raw_text)} chars)")
+        logger.info(f"🧠 Stage 2a/4: Starting Data Extraction for {document_id}")
         self.db_manager.update_processing_stage(
             document_id, 
             ProcessingStage.AI_ANALYSIS, 
-            {"raw_text": raw_text, "progress": 30}
+            {"progress": 30}
         )
         
-        extracted_data = await self.extraction_agent.extract_data(raw_text)
+        extracted_data = await self.extraction_agent.extract_data(structured_ocr_data)
         if not extracted_data.markers:
             logger.warning(f"ExtractionAgent returned no markers for document {document_id}")
         
@@ -146,14 +150,14 @@ class ProcessingPipeline:
         logger.info(f"✅ AI analysis completed for {document_id}")
         return insights_result
     
-    async def _execute_save_stage(self, document_id: str, filename: str, raw_text: str, insights_result: HealthInsights) -> None:
+    async def _execute_save_stage(self, document_id: str, filename: str, structured_ocr_data: Dict, insights_result: HealthInsights) -> None:
         """
         Execute save results stage with progress tracking.
         
         Args:
             document_id: ID of the document being processed
             filename: Original filename of the document
-            raw_text: Extracted text content from OCR stage
+            structured_ocr_data: The structured JSON response from the OCR service.
             insights_result: Health insights from AI analysis
         """
         logger.info(f"💾 Stage 3/4: Saving analysis results for {document_id}")
@@ -161,6 +165,9 @@ class ProcessingPipeline:
         
         # Add brief delay for stage visibility
         await asyncio.sleep(0.5)
+
+        # For debugging, we still save the raw text, but the insights are generated from structured data
+        raw_text = "".join([page.get('markdown', '') for page in structured_ocr_data.get('pages', [])])
         
         # Save complete results
         final_data = {

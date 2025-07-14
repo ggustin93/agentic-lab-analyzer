@@ -35,9 +35,12 @@ class MistralOCRService:
         """Check if Mistral OCR service is available."""
         return bool(self.api_key)
 
-    def extract_text(self, file_url: str) -> str:
+    def extract_structured_data(self, file_url: str) -> Dict[str, Any]:
         """
-        Extracts text from a given file URL (image or PDF) using Mistral's OCR API.
+        Extracts structured data from a given file URL using Mistral's OCR API.
+        
+        Instead of returning raw text, this returns the full JSON response,
+        preserving the markdown structure for more intelligent parsing downstream.
         """
         if not self.is_available():
             raise Exception("Mistral OCR service not available. MISTRAL_API_KEY is not set.")
@@ -75,24 +78,14 @@ class MistralOCRService:
             response.raise_for_status()
 
             ocr_result = response.json()
-            logger.debug(f"Mistral OCR API full response: {ocr_result}")  # Log the full response
+            logger.debug(f"Mistral OCR API full response: {ocr_result}")
             
-            # The API returns a list of pages, each with a 'markdown' field.
-            # We concatenate the text from all pages, adding a separator.
-            pages_text = []
-            for page in ocr_result.get('pages', []):
-                page_index = page.get('index', 'N/A')
-                markdown_text = page.get('markdown', '')
-                pages_text.append(f"--- Page {page_index + 1} ---\n\n{markdown_text}\n\n")
+            if not ocr_result.get('pages'):
+                 logger.warning(f"OCR for {filename} completed but no pages were extracted.")
+                 return {}
             
-            extracted_text = "".join(pages_text)
-
-            if not extracted_text:
-                 logger.warning(f"OCR for {filename} completed but no text was extracted.")
-                 return ""
-            
-            logger.info(f"Successfully extracted {len(extracted_text)} characters from {filename}.")
-            return extracted_text
+            logger.info(f"Successfully extracted structured data from {filename}.")
+            return ocr_result
 
         except requests.exceptions.RequestException as e:
             logger.error(f"HTTP request failed during OCR for {filename}: {e}", exc_info=True)
