@@ -11,10 +11,10 @@ import base64
 from services.mistral_ocr_service import MistralOCRService
 
 @pytest.fixture
-def mock_requests_post():
-    """Mock requests.post"""
-    with patch('services.mistral_ocr_service.requests.post') as mock_post:
-        yield mock_post
+def mock_requests():
+    """Mock requests module"""
+    with patch('services.mistral_ocr_service.requests') as mock_requests:
+        yield mock_requests
 
 @pytest.fixture
 def mistral_service():
@@ -34,47 +34,62 @@ class TestMistralOCRService:
             service = MistralOCRService()
             assert service.is_available() is False
 
-    @pytest.mark.asyncio
-    async def test_extract_text_from_image_success(self, mistral_service, mock_requests_post, tmp_path):
+    def test_extract_text_from_image_success(self, mistral_service, mock_requests, tmp_path):
         """Test successful text extraction from an image."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        # Mock the GET request to download the file
+        mock_get_response = MagicMock()
+        mock_get_response.status_code = 200
+        mock_get_response.content = b"fake image content"
+        mock_requests.get.return_value = mock_get_response
+        
+        # Mock the POST request to Mistral API
+        mock_post_response = MagicMock()
+        mock_post_response.status_code = 200
+        mock_post_response.json.return_value = {
             "pages": [{"index": 0, "markdown": "Extracted text from image."}]
         }
-        mock_requests_post.return_value = mock_response
-
-        img_path = tmp_path / "test.png"
-        Image.new('RGB', (100, 100)).save(img_path)
+        mock_requests.post.return_value = mock_post_response
         
-        result = mistral_service.extract_text(str(img_path), 'png')
-        assert "Extracted text from image." in result
-        mock_requests_post.assert_called_once()
+        # Mock magic.from_buffer to return an image MIME type
+        with patch('services.mistral_ocr_service.magic.from_buffer') as mock_magic:
+            mock_magic.return_value = "image/png"
+            
+            result = mistral_service.extract_text("http://example.com/test.png")
+            assert "Extracted text from image." in result
+            mock_requests.get.assert_called_once()
+            mock_requests.post.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_extract_text_from_pdf_success(self, mistral_service, mock_requests_post, tmp_path):
+    def test_extract_text_from_pdf_success(self, mistral_service, mock_requests, tmp_path):
         """Test successful text extraction from a PDF."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        # Mock the GET request to download the file
+        mock_get_response = MagicMock()
+        mock_get_response.status_code = 200
+        mock_get_response.content = b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+        mock_requests.get.return_value = mock_get_response
+        
+        # Mock the POST request to Mistral API
+        mock_post_response = MagicMock()
+        mock_post_response.status_code = 200
+        mock_post_response.json.return_value = {
             "pages": [{"index": 0, "markdown": "Extracted text from PDF."}]
         }
-        mock_requests_post.return_value = mock_response
-
-        pdf_path = tmp_path / "test.pdf"
-        with open(pdf_path, "wb") as f:
-            f.write(b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n") # Minimal PDF
-
-        result = mistral_service.extract_text(str(pdf_path), 'pdf')
-        assert "Extracted text from PDF." in result
-        mock_requests_post.assert_called_once()
+        mock_requests.post.return_value = mock_post_response
+        
+        # Mock magic.from_buffer to return a PDF MIME type
+        with patch('services.mistral_ocr_service.magic.from_buffer') as mock_magic:
+            mock_magic.return_value = "application/pdf"
+            
+            result = mistral_service.extract_text("http://example.com/test.pdf")
+            assert "Extracted text from PDF." in result
+            mock_requests.get.assert_called_once()
+            mock_requests.post.assert_called_once()
         
     def test_extract_text_service_unavailable(self):
         """Test extraction when service is unavailable."""
         with patch('services.mistral_ocr_service.settings.MISTRAL_API_KEY', new=''):
             service = MistralOCRService()
             with pytest.raises(Exception, match="Mistral OCR service not available"):
-                service.extract_text("/fake/path.png", 'png')
+                service.extract_text("http://example.com/fake.png")
 
     def test_get_usage_info(self, mistral_service):
         """Test the get_usage_info method."""
