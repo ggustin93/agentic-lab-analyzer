@@ -396,7 +396,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
         switchMap(params => {
           this.document.set(undefined); // Reset for loading state
           const id = params.get('id');
-          if (!id) {
+          
+          // Enhanced debugging and validation
+          console.log('[AnalysisComponent] Route params:', params);
+          console.log('[AnalysisComponent] Document ID from params:', id);
+          console.log('[AnalysisComponent] All param keys:', params.keys);
+          
+          // Strict validation with better error handling
+          if (!id || id === 'undefined' || id === 'null' || id.trim() === '') {
+            console.error('[AnalysisComponent] Invalid or missing document ID:', id);
+            console.error('[AnalysisComponent] Full URL:', this.router.url);
+            console.error('[AnalysisComponent] Route snapshot:', this.route.snapshot);
             return of(null);
           }
 
