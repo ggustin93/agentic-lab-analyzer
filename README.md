@@ -49,24 +49,32 @@ Here's a visual overview of the application's key features:
 The Lab Insight Engine implements a multi-tier architecture designed around event-driven processing, real-time communication, and specialized AI agents. The system orchestrates complex document analysis workflows through a chain of responsibility pattern, where each component has a distinct role in transforming raw medical documents into structured, actionable health insights.
 
 **How the Architecture Works:**
-When a user uploads a medical document, the system initiates a four-stage processing pipeline: (1) **OCR Extraction** - Mistral AI vision models extract raw text and identify structural elements, (2) **AI Analysis** - Chutes.AI processes the extracted data to identify lab markers, values, and reference ranges using specialized medical prompts, (3) **Data Persistence** - Structured health data is validated and stored in Supabase PostgreSQL with full audit trails, and (4) **Real-time Updates** - Server-Sent Events stream progress updates to the Angular frontend, enabling live status tracking with color-coded visual indicators. The frontend maintains reactive state through Angular signals, ensuring the UI immediately reflects processing changes without polling. Each processing stage is independently testable and can be monitored through comprehensive logging, while the agent-based backend design allows for easy swapping of AI services or processing strategies without affecting the core application logic.
+When a user uploads a medical document, the system initiates a multi-stage processing pipeline: **(1) OCR Extraction** - Mistral AI vision models extract raw text and identify structural elements, **(2) Data Extraction** - A specialized extraction agent processes the extracted text to identify lab markers, values, and reference ranges using Chutes.AI, **(3) AI Insights Generation** - A separate insight agent creates clinical analysis and recommendations using Chutes.AI with medical prompts, **(4) Data Persistence** - Structured health data is validated and stored in Supabase PostgreSQL with complete analysis results, and **(5) Real-time Updates** - Server-Sent Events stream progress updates to the Angular frontend every 2 seconds, enabling live status tracking with color-coded visual indicators for four processing stages: **OCR extraction**, **AI analysis**, **saving results**, and **completion**. The frontend maintains reactive state through Angular signals, ensuring the UI immediately reflects processing changes without polling. Each processing stage is independently testable and monitored through comprehensive logging, while the agent-based backend design allows for easy swapping of AI services or processing strategies without affecting the core application logic.
 
 ### 3.1 High-Level Diagram
 ```
 ┌─────────────────────────┐      ┌───────────────────────────┐      ┌─────────────────────────┐
-│   Angular 19 Frontend   │◄───► │      FastAPI Backend      │      │     Supabase Platform   │
-│ (Signals, OnPush, SSE)  │      │   (Specialized Agents)    │      │  (Postgres & Storage)   │
+│   Angular 19 Frontend   │◄──── │      FastAPI Backend      │ ───► │     Supabase Platform   │
+│ (Signals, OnPush, SSE)  │  HTTP│   (Agent Orchestration)   │ SQL  │  (Postgres & Storage)   │
 ├─────────────────────────┤      ├───────────────────────────┤      ├─────────────────────────┤
-│ - Document Upload       │      │ - DocumentProcessor       │      │ - Document Records      │
-│ - Real-Time Dashboard   │      │ - ProcessingPipeline      │      │ - Analysis Results      │
-│ - Analysis Results View │      │ - ExtractionAgent         │      │ - Stored PDF/Image Files│
-│                         │      │ - InsightAgent            │      │                         │
+│ - Signal-Based Store    │      │ - DocumentProcessor       │      │ - Health Markers Schema │
+│ - Three-Layer Services  │  SSE │ - ProcessingPipeline      │      │ - Document Metadata     │
+│ - Real-Time Dashboard   │◄──── │ - DatabaseManager         │      │ - Binary File Storage   │
+│ - PDF Viewer + Analysis │      │ - JSON Validation         │      │ - Reference Ranges      │
 └─────────────────────────┘      └────────────┬──────────────┘      └─────────────────────────┘
-                                              │
+                                              │ API Calls
                                               ▼
                                ┌───────────────────────────┐
-                               │    AI & OCR Services      │
-                               │ (Mistral OCR, Chutes.AI)  │
+                               │     Agent Architecture    │
+                               │                           │
+                               │ ┌─────────────────────────┐ │
+                               │ │   ExtractionAgent       │ │ ──► Mistral Vision API
+                               │ │   (OCR Processing)      │ │
+                               │ └─────────────────────────┘ │
+                               │ ┌─────────────────────────┐ │
+                               │ │   InsightAgent          │ │ ──► Chutes.AI LLM
+                               │ │   (Clinical Analysis)   │ │
+                               │ └─────────────────────────┘ │
                                └───────────────────────────┘
 ```
 
