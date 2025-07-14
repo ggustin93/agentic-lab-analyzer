@@ -308,26 +308,34 @@ class DatabaseManager:
         Returns:
             Dict: Formatted document data
         """
-        # Extract analysis data if available
-        analysis_data = None
-        ai_insights = None
-        extracted_data = []
+        analysis_results = doc.get("analysis_results")
+        analysis = None
         
-        if doc.get("analysis_results") and isinstance(doc["analysis_results"], list) and len(doc["analysis_results"]) > 0:
-            analysis = doc["analysis_results"][0]
-            analysis_data = analysis.get("structured_data", {})
-            ai_insights = analysis.get("insights", "")
+        # Handle both list (one-to-many) and dict (one-to-one) from Supabase join
+        if isinstance(analysis_results, list) and len(analysis_results) > 0:
+            analysis = analysis_results[0]
+        elif isinstance(analysis_results, dict):
+            analysis = analysis_results
+
+        extracted_data = []
+        ai_insights = None
+        
+        if analysis:
+            structured_data = analysis.get("structured_data")
+            ai_insights = analysis.get("insights")
             
-            # Extract markers for frontend
-            if isinstance(analysis_data, dict) and "data" in analysis_data:
-                extracted_data = analysis_data["data"].get("markers", [])
+            # Safely extract markers for the frontend
+            if isinstance(structured_data, dict) and "data" in structured_data:
+                # Ensure we handle potential missing 'markers' key gracefully
+                if isinstance(structured_data["data"], dict):
+                    extracted_data = structured_data["data"].get("markers", [])
         
         return {
-            "id": doc["id"],  # Changed from document_id to id to match frontend HealthDocument interface
-            "document_id": doc["id"],  # Keep for backward compatibility
-            "filename": doc["filename"],
-            "uploaded_at": doc["upload_date"],
-            "status": doc["status"],
+            "id": doc.get("id"),
+            "document_id": doc.get("id"),
+            "filename": doc.get("filename"),
+            "uploaded_at": doc.get("upload_date"),
+            "status": doc.get("status"),
             "processed_at": doc.get("processed_at"),
             "public_url": doc.get("public_url"),
             "raw_text": doc.get("raw_text"),
