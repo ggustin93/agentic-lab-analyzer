@@ -121,15 +121,30 @@
                 </span>
               }
               
-              @if (document.status === DocumentStatus.COMPLETE) {
+              @if (document.status === DocumentStatus.COMPLETE && document.id) {
                 <button [routerLink]="['/analysis', document.id]"
-                        class="text-primary-600 hover:text-primary-800 text-sm font-medium">
-                  View Results
+                        class="inline-flex items-center px-3 py-1.5 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors duration-150 shadow-sm">
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                  </svg>
+                  View Analysis
                 </button>
               }
               
+              <!-- Show disabled preview for processing documents -->
+              @if (document.status === DocumentStatus.PROCESSING && document.id) {
+                <div class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-500 text-sm font-medium rounded-md cursor-not-allowed">
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                  </svg>
+                  Processing...
+                </div>
+              }
+              
               <!-- Retry button for stuck documents -->
-              @if (isDocumentStuck(document)) {
+              @if (isDocumentStuck(document) && document.id) {
                 <button (click)="onRetryDocument(document.id)"
                         class="p-1 text-orange-600 hover:text-orange-800 hover:bg-orange-50 rounded transition-all duration-150"
                         title="Retry processing">
@@ -141,7 +156,8 @@
                 </button>
               }
               
-              <button (click)="onDeleteDocument(document.id)"
+              @if (document.id) {
+                <button (click)="onDeleteDocument(document.id)"
                       class="p-1 transition-all duration-150 rounded"
                       [class]="document.status === DocumentStatus.ERROR 
                         ? 'text-red-500 hover:text-red-700 hover:bg-red-50' 
@@ -155,6 +171,7 @@
                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
               </button>
+              }
             </div>
           </div>
         </div>

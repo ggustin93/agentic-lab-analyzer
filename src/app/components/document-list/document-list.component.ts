@@ -111,6 +111,12 @@ export class DocumentListComponent {
    * Handle document deletion with confirmation
    */
   onDeleteDocument(documentId: string): void {
+    // Defensive programming - validate document ID
+    if (!documentId || documentId === 'undefined' || documentId === 'null' || documentId.trim() === '') {
+      console.error('❌ Invalid document ID provided to onDeleteDocument:', documentId);
+      return;
+    }
+
     const document = this.documents().find(d => d.id === documentId);
     const documentName = document?.filename || 'this document';
     const isErrorDocument = document?.status === DocumentStatus.ERROR;
@@ -164,6 +170,12 @@ export class DocumentListComponent {
    * Handles retry processing for stuck documents
    */
   onRetryDocument(documentId: string): void {
+    // Defensive programming - validate document ID
+    if (!documentId || documentId === 'undefined' || documentId === 'null' || documentId.trim() === '') {
+      console.error('❌ Invalid document ID provided to onRetryDocument:', documentId);
+      return;
+    }
+
     const confirmMessage = 'This document appears to be stuck in processing. Would you like to retry the analysis?';
     
     if (confirm(confirmMessage)) {
