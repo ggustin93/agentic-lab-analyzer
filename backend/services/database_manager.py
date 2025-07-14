@@ -313,7 +313,7 @@ class DatabaseManager:
         ai_insights = None
         extracted_data = []
         
-        if doc.get("analysis_results") and len(doc["analysis_results"]) > 0:
+        if doc.get("analysis_results") and isinstance(doc["analysis_results"], list) and len(doc["analysis_results"]) > 0:
             analysis = doc["analysis_results"][0]
             analysis_data = analysis.get("structured_data", {})
             ai_insights = analysis.get("insights", "")
@@ -323,7 +323,8 @@ class DatabaseManager:
                 extracted_data = analysis_data["data"].get("markers", [])
         
         return {
-            "document_id": doc["id"],
+            "id": doc["id"],  # Changed from document_id to id to match frontend HealthDocument interface
+            "document_id": doc["id"],  # Keep for backward compatibility
             "filename": doc["filename"],
             "uploaded_at": doc["upload_date"],
             "status": doc["status"],
