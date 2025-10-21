@@ -2,7 +2,7 @@
 
 > ⚠️ **Important Notice**
 >
-> This repository is a proof-of-concept, initiated in July 2025 as part of a job interview preparation process. The codebase is under active development and may contain incomplete features or vulnerabilities. It is not intended for production or medical use.
+> This repository is a proof-of-concept, initiated in July 2025. The codebase is under active development and may contain incomplete features or vulnerabilities. It is not intended for production or medical use.
 
 This project is a full-stack application designed to analyze medical lab documents. It demonstrates a modern software architecture using Angular, FastAPI, and a specialized agent-based backend system to process and interpret health data.
 
