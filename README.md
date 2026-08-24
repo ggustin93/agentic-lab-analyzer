@@ -101,6 +101,7 @@ A high-level map — the detailed structure and per-file notes live in [`CLAUDE.
 | `docs/backlog/` | Specified backlog with acceptance criteria, mirrored as GitHub issues ([index](docs/backlog/README.md)) |
 | `docs/specs/` | Feature specifications — behavior, business rules, edge cases, validation intent ([lab marker extraction](docs/specs/lab-marker-extraction.md)) |
 | `docs/` | [AI workflow](docs/ai-workflow.md), [Docker guide](docs/docker.md), [research notes](docs/research-notes.md) |
+| `CHANGELOG.md` | [Version history](CHANGELOG.md) by phase |
 
 ### 3.3 Frontend (Angular 19)
 
