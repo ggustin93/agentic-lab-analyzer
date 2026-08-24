@@ -1,27 +1,27 @@
-# License - Personal Use Only
+# MIT License
 
-**DocBot AI - Health Document Analyzer**  
-Copyright (c) 2025 Guillaume Gustin  
-Contact: guillaume.gustin.9@gmail.com
+Copyright (c) 2025 Guillaume Gustin
 
----
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to use, copy, modify, and merge the Software for **personal, non-commercial purposes only**, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-- The Software may **not** be used, in whole or in part, for any **commercial purpose**, including but not limited to:
-  - Selling, licensing, or offering it as part of a paid product or service.
-  - Using it in a business or organization for revenue-generating activities.
-  - Distributing it as part of any commercial offering.
-
-- This license does **not** grant permission to sublicense, resell, or otherwise redistribute the Software for commercial gain.
-
-- Redistributions of this Software, modified or unmodified, must retain this license and the copyright notice.
-
----
-
-**For commercial licensing inquiries, please contact:**  
-📧 guillaume.gustin.9@gmail.com
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ---
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+**Note on intended use:** this project is an educational proof-of-concept. It
+is not a medical device and must not be used for clinical decisions — see
+README section 8.

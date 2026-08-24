@@ -52,36 +52,38 @@ DocBot AI implements a multi-tier architecture designed around event-driven proc
 **How it works, in five steps:**
 
 1. **OCR extraction** — `MistralOCRService` turns the uploaded PDF/image into per-page markdown, preserving table structure.
-2. **Structured extraction** — `ExtractionAgent` (Mistral Large) parses that markdown into typed health markers, validated with Pydantic.
+2. **Structured extraction** — `ExtractionAgent` (Mistral Large) parses that markdown into typed health markers, validated with Pydantic — behavior, business rules and edge cases are specified in [docs/specs/lab-marker-extraction.md](docs/specs/lab-marker-extraction.md).
 3. **Insight generation** — `InsightAgent` (Chutes.AI) produces a summary and recommendations from the *validated* structured data; the medical disclaimer is enforced server-side.
 4. **Persistence** — results are stored in Supabase PostgreSQL through version-controlled migrations.
 5. **Real-time updates** — Server-Sent Events stream the four processing stages to the Angular frontend, whose state lives in signals.
 
 ### 3.1 High-Level Diagram
-```
-┌─────────────────────────┐      ┌───────────────────────────┐      ┌─────────────────────────┐
-│   Angular 19 Frontend   │◄──── │      FastAPI Backend      │ ───► │     Supabase Platform   │
-│ (Signals, OnPush, SSE)  │  HTTP│   (Agent Orchestration)   │ SQL  │  (Postgres & Storage)   │
-├─────────────────────────┤      ├───────────────────────────┤      ├─────────────────────────┤
-│ - Signal-Based Store    │      │ - DocumentProcessor       │      │ - Health Markers Schema │
-│ - Three-Layer Services  │  SSE │ - ProcessingPipeline      │      │ - Document Metadata     │
-│ - Real-Time Dashboard   │◄──── │ - DatabaseManager         │      │ - Binary File Storage   │
-│ - PDF Viewer + Analysis │      │ - JSON Validation         │      │ - Reference Ranges      │
-└─────────────────────────┘      └────────────┬──────────────┘      └─────────────────────────┘
-                                              │ API Calls
-                                              ▼
-                               ┌─────────────────────────────┐
-                               │ Agents — swappable (ADR-007)│
-                               │                             │
-                               │  MistralOCRService  ──────────► Mistral OCR API
-                               │  (page → markdown)          │
-                               │                             │
-                               │  ExtractionAgent    ──────────► Mistral Large
-                               │  (markdown → markers)       │
-                               │                             │
-                               │  InsightAgent       ──────────► Chutes.AI LLM
-                               │  (markers → insights)       │
-                               └─────────────────────────────┘
+
+```mermaid
+flowchart LR
+    subgraph Frontend["Angular 19 Frontend"]
+        UI["Signal store · three-layer services<br/>dashboard · PDF viewer"]
+    end
+    subgraph Backend["FastAPI Backend"]
+        DP["DocumentProcessor<br/>ProcessingPipeline · Presenter"]
+        subgraph Agents["Agents — swappable (ADR-007)"]
+            OCR["MistralOCRService<br/>page → markdown"]
+            EXT["ExtractionAgent<br/>markdown → markers"]
+            INS["InsightAgent<br/>markers → insights"]
+        end
+    end
+    subgraph Supabase["Supabase Platform"]
+        DB["PostgreSQL<br/>markers · metadata"]
+        ST["File storage"]
+    end
+    UI -- "HTTP upload" --> DP
+    DP -- "SSE status stream" --> UI
+    DP --> OCR --> EXT --> INS
+    OCR -.-> M1["Mistral OCR API"]
+    EXT -.-> M2["Mistral Large"]
+    INS -.-> M3["Chutes.AI LLM"]
+    DP --> DB
+    DP --> ST
 ```
 
 Architecture decisions and their trade-offs are recorded as ADRs in [`docs/adr/`](docs/adr/); the AI-assisted development workflow behind this project is documented in [`docs/ai-workflow.md`](docs/ai-workflow.md).
@@ -97,7 +99,8 @@ A high-level map — the detailed structure and per-file notes live in [`CLAUDE.
 | `supabase/migrations/` | Version-controlled schema, each migration with its rollback |
 | `docs/adr/` | Architecture Decision Records ([index](docs/adr/README.md)) |
 | `docs/backlog/` | Specified backlog with acceptance criteria, mirrored as GitHub issues ([index](docs/backlog/README.md)) |
-| `docs/` | [AI workflow](docs/ai-workflow.md) and [research notes](docs/research-notes.md) |
+| `docs/specs/` | Feature specifications — behavior, business rules, edge cases, validation intent ([lab marker extraction](docs/specs/lab-marker-extraction.md)) |
+| `docs/` | [AI workflow](docs/ai-workflow.md), [Docker guide](docs/docker.md), [research notes](docs/research-notes.md) |
 
 ### 3.3 Frontend (Angular 19)
 
@@ -261,24 +264,17 @@ robustness, calibration) are collected in
   [`docs/ai-workflow.md`](docs/ai-workflow.md).
 
 ## 9. Roadmap
-The following roadmap outlines areas for future exploration, focusing on applying advanced architectural patterns and strengthening the system's robustness and scalability.
 
-### 9.1 Architecture & Refactoring
-*   **Evolve to Hexagonal Architecture:** Formally refactor the backend by defining clear "Ports" (the application's core use cases) and "Adapters" (for external technologies like Supabase or Mistral). This would further decouple the core domain logic from infrastructure concerns.
-*   **Introduce Domain-Driven Design (DDD) Concepts:** Clarify the "Bounded Contexts" within the application (e.g., `DocumentIngestion` vs. `AnalysisInterpretation`). Define Aggregates (like a `Document` with its `AnalysisResult`) and Value Objects to create a more expressive and resilient domain model.
+The roadmap **is** the backlog: every planned item is specified with context,
+acceptance criteria and priority in [`docs/backlog/`](docs/backlog/README.md)
+and mirrored as [GitHub issues](https://github.com/ggustin93/agentic-lab-analyzer/issues).
+The current priorities, in order:
 
-### 9.2 Frontend Modernization & DX
-*   **Full Signal Adoption:** Complete the migration from RxJS-based patterns to a fully signal-based architecture for state management and component communication, creating a more modern and unified codebase.
-*   **Enhanced Testing Framework:** Consider migrating from Karma/Jasmine to **Jest** for improved performance, better mocking capabilities, and enhanced developer experience.
-
-### 9.3 Backend & Scalability
-*   **Integrate Local, Privacy-Focused Agents:** Implement alternative agents using on-device models like **`docTR`** for OCR and **`Ollama`** for LLM analysis, offering users a fully offline and private processing option.
-*   **Decouple with Message Queue:** Replace direct `DocumentProcessor` calls with a message queue (e.g., RabbitMQ, Redis Streams) for improved fault tolerance and scalability.
-*   **Implement Caching Layer:** Add Redis-based caching for external AI service calls to reduce latency and costs.
-
-### 9.4 Security & Observability
-*   **Implement Authentication:** Integrate full authentication system (e.g., Supabase Auth) with Row-Level Security (RLS) for data privacy.
-*   **Enhanced Monitoring:** Implement structured logging and observability platform integration (e.g., Prometheus/Grafana) for performance tracking and system health monitoring.
+1. **Trust the deployment** — authentication, RLS and private storage, rate limiting (backlog 003–005): the prerequisites to running anywhere but locally.
+2. **Trust the AI** — a prompt evaluation harness over a synthetic lab-report corpus (011, 018), deterministic out-of-range flagging (007), analysis provenance (010).
+3. **Own the infrastructure** — local OCR/LLM adapters (Docling, Ollama) for a fully offline, privacy-preserving mode (017).
 
 ## 10. License
-This project is for personal, non-commercial use only. Please see the [LICENSE.md](LICENSE.md) file for more details.
+
+[MIT](LICENSE.md). The intended-use boundary in section 8.1 still applies:
+this is an educational proof-of-concept, not a medical device.
