@@ -34,6 +34,7 @@ most of its value (see `001`–`004`).
 | [015](015-ocr-quality-gate.md) | OCR quality gate with three-way routing | Medium | Could | Open ([#12](https://github.com/ggustin93/agentic-lab-analyzer/issues/12)) |
 | [016](016-repository-split.md) | Split DatabaseManager into repositories | Low | Could† | Open ([#13](https://github.com/ggustin93/agentic-lab-analyzer/issues/13)) |
 | [017](017-docling-local-ocr-adapter.md) | Local OCR adapters: modality routing (Docling / PaddleOCR) | Low | Could | Open ([#14](https://github.com/ggustin93/agentic-lab-analyzer/issues/14)) |
+| [018](018-synthetic-corpus-generator.md) | Synthetic lab-report corpus generator | Medium | Should | Open ([#15](https://github.com/ggustin93/agentic-lab-analyzer/issues/15)) |
 
 ## Prioritization method
 
@@ -52,6 +53,7 @@ goal, where 003/004 become non-negotiable Musts).
 | 010 Analysis provenance | 3 | 80 % | 1 d | 2.4 | Should |
 | 008 Native structured outputs | 3 | 80 % | 1 d | 2.4 | Should |
 | 005 Rate limiting | 3 | 90 % | 0.5 d | 5.4 | Should |
+| 018 Synthetic corpus generator | 4 | 90 % | 1 d | 3.6 | Should |
 | 011 Prompt evaluation harness | 4 | 70 % | 2 d | 1.4 | Could |
 | 015 OCR quality gate | 3 | 60 % | 3 d | 0.6 | Could |
 | 003 Authentication & scoping | 4 | 70 % | 3 d | 0.9 | Could* |

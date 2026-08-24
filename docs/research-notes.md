@@ -17,8 +17,11 @@ Any improvement to prompts or models is currently unmeasurable (see backlog
   documents raise privacy questions this project should not take on; a
   *synthetic report generator* (templates parameterized by laboratory
   format, language, units, and injected OCR-like noise) offers controlled
-  difficulty and unlimited labeled data, at the cost of realism — a
-  limitation to state, not hide.
+  difficulty and unlimited labeled data — with ground truth known by
+  construction — at the cost of realism: a limitation to state, not hide.
+  The generator is now specified as backlog 018; the dataset discipline
+  (dev/held-out split by template, small local anonymized real set as the
+  reality check) is part of backlog 011.
 - **Field-level metrics**: per-marker precision/recall for detection,
   exact-match and normalized-match for value/unit/range, and a separate
   date-accuracy figure (day/month inversion being the failure mode we have
