@@ -41,8 +41,7 @@ describe('Application Happy Path E2E Test', () => {
     cy.visit('/');
     cy.wait('@getDocuments');
     
-    // Should show empty state or upload prompt
-    // This tests the initial user experience
-    cy.get('body').should('contain.text', 'Upload' || 'Drag' || 'No documents');
+    // Should show the upload prompt as the initial user experience
+    cy.get('body').should('contain.text', 'Upload');
   });
 }); 

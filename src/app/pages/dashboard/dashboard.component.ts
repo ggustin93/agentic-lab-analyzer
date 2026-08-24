@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, computed, effect, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DocumentAnalysisService } from '../../services/document-analysis.service';
 import { UploadZoneComponent } from '../../components/upload-zone/upload-zone.component';
@@ -128,9 +128,9 @@ type ProcessingStage = 'ocr_extraction' | 'ai_analysis' | 'saving_results' | 'co
             
             <app-upload-zone 
               (fileSelected)="onFileSelected($event)"
-              [isUploading]="shouldShowProgress()"
-              [progress]="getUploadProgress()"
-              [processingStage]="getProcessingStage()">
+              [isUploading]="showProgress()"
+              [progress]="uploadProgress()"
+              [processingStage]="processingStage()">
             </app-upload-zone>
           </div>
 
@@ -147,109 +147,56 @@ type ProcessingStage = 'ocr_extraction' | 'ai_analysis' | 'saving_results' | 'co
     </div>
   `
 })
-export class DashboardComponent implements OnInit {
-  // Modern inject() pattern instead of constructor injection
+export class DashboardComponent implements OnInit, OnDestroy {
   private documentService = inject(DocumentAnalysisService);
-  
-  // Access signals from the service
+
   public readonly documents = this.documentService.documents;
-  
-  // Computed signals for derived state (replaces RxJS pipes)
+
   public readonly processingDocument = computed(() => {
-    // Find the most recently uploaded document that's still processing
     const processingDocs = this.documents().filter(doc => doc.status === DocumentStatus.PROCESSING);
     return processingDocs.length > 0 ? processingDocs[0] : null;
   });
-  
-  // Track if any document is currently being processed (for UI state)
+
   public readonly isProcessing = computed(() => this.processingDocument() !== null);
 
-  constructor() {
-    // Enhanced real-time logging using effects (replaces manual subscriptions)
-    effect(() => {
-      const doc = this.processingDocument();
-      if (doc) {
-        console.log(`📊 DASHBOARD - Real-time update for ${doc.filename}:`);
-        console.log(`   📈 Progress: ${doc.progress || 0}%`);
-        console.log(`   🔄 Stage: "${doc.processing_stage || 'unknown'}"`);
-        console.log(`   ⚡ Status: ${doc.status}`);
-        console.log(`   🆔 Document ID: ${doc.id}`);
-      } else {
-        console.log(`📊 DASHBOARD - No processing document found`);
-      }
-    });
-    
-    // Also log all documents for debugging
-    effect(() => {
-      const docs = this.documents();
-      const processingCount = docs.filter(d => d.status === DocumentStatus.PROCESSING).length;
-      console.log(`📋 DASHBOARD - Documents updated: ${docs.length} total, ${processingCount} processing`);
-    });
-  }
+  // Derived progress state used by the template
+  public readonly uploadProgress = computed(() => this.processingDocument()?.progress);
+  public readonly processingStage = computed<ProcessingStage>(() => this.processingDocument()?.processing_stage);
+  public readonly showProgress = this.isProcessing;
+
+  private stuckDocumentsInterval?: ReturnType<typeof setInterval>;
 
   ngOnInit(): void {
-    console.log('🚀 Dashboard initialized with signal-based state management');
-    
-    // Load existing documents from database on initialization
-    console.log('📋 Loading existing documents from database...');
-    this.documentService.loadDocuments().subscribe({
-      next: (documents) => {
-        console.log(`✅ Successfully loaded ${documents.length} existing documents`);
-        
-        // Check for stuck documents on load
-        this.documentService.checkForStuckDocuments();
-      },
-      error: (error) => {
-        console.error('❌ Failed to load existing documents:', error);
-      }
-    });
+    this.documentService.loadDocuments().subscribe();
 
-    // Set up periodic check for stuck documents (every 2 minutes)
-    setInterval(() => {
+    // The backend pipeline is fire-and-forget: a crashed worker leaves a
+    // document in "processing" forever, so poll and surface stuck ones.
+    this.stuckDocumentsInterval = setInterval(() => {
       const stuckDocs = this.documentService.getStuckDocuments();
       if (stuckDocs.length > 0) {
-        console.warn(`⚠️ Dashboard detected ${stuckDocs.length} stuck document(s). Consider using the retry button.`);
+        console.warn(`Dashboard detected ${stuckDocs.length} stuck document(s). Consider using the retry button.`);
       }
-    }, 2 * 60 * 1000); // Check every 2 minutes
+    }, 2 * 60 * 1000);
   }
 
-  // No ngOnDestroy needed - effects are automatically cleaned up!
+  ngOnDestroy(): void {
+    // Effects are auto-cleaned, but intervals are not
+    clearInterval(this.stuckDocumentsInterval);
+  }
 
   onFileSelected(file: File): void {
-    console.log('🚀 Starting upload for:', file.name);
-    
-    this.documentService.uploadDocument(file)
-      .subscribe({
-        next: (uploadResponse) => {
-          console.log('✅ Upload successful:', uploadResponse);
-          console.log('🔄 Starting real-time progress monitoring...');
-        },
-        error: (error) => {
-          console.error('❌ Upload failed:', error);
-        }
-      });
+    this.documentService.uploadDocument(file).subscribe({
+      error: () => {
+        // Error state is surfaced through the store's error signal
+      }
+    });
   }
 
   onDeleteDocument(documentId: string): void {
-    console.log('🗑️ Deleting document:', documentId);
     this.documentService.removeDocument(documentId);
   }
 
   onRetryDocument(documentId: string): void {
-    console.log('🔄 Retrying document processing:', documentId);
     this.documentService.retryDocumentProcessing(documentId);
-  }
-
-  // Simplified methods using computed signals instead of RxJS pipes
-  getUploadProgress(): number | undefined {
-    return this.processingDocument()?.progress;
-  }
-
-  getProcessingStage(): ProcessingStage {
-    return this.processingDocument()?.processing_stage;
-  }
-
-  shouldShowProgress(): boolean {
-    return this.processingDocument() !== null;
   }
 }

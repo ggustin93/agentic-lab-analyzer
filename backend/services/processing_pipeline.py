@@ -9,6 +9,7 @@ import logging
 import asyncio
 from typing import Dict, Optional
 
+from agents.base import OCRAgent, ExtractionAgentProtocol, InsightAgentProtocol
 from models.health_models import HealthInsights
 from services.database_manager import DatabaseManager
 from services.mistral_ocr_service import MistralOCRService
@@ -44,17 +45,24 @@ class ProcessingPipeline:
     with comprehensive progress tracking and error handling.
     """
     
-    def __init__(self, database_manager: DatabaseManager):
+    def __init__(
+        self,
+        database_manager: DatabaseManager,
+        ocr_agent: Optional[OCRAgent] = None,
+        extraction_agent: Optional[ExtractionAgentProtocol] = None,
+        insight_agent: Optional[InsightAgentProtocol] = None,
+    ):
         """
-        Initialize processing pipeline with required dependencies.
-        
-        Args:
-            database_manager: Database manager for persistence operations
+        Initialize processing pipeline with its dependencies.
+
+        Agents are injected against their Protocols (agents/base.py) so
+        implementations can be swapped — or faked in tests — without touching
+        the pipeline. The Mistral/Chutes implementations are the defaults.
         """
         self.db_manager = database_manager
-        self.ocr_agent = MistralOCRService()
-        self.extraction_agent = ExtractionAgent()
-        self.insight_agent = InsightAgent()
+        self.ocr_agent: OCRAgent = ocr_agent or MistralOCRService()
+        self.extraction_agent: ExtractionAgentProtocol = extraction_agent or ExtractionAgent()
+        self.insight_agent: InsightAgentProtocol = insight_agent or InsightAgent()
     
     async def process_document_async(self, document_id: str, file_url: str, filename: str) -> None:
         """

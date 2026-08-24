@@ -27,17 +27,10 @@ def clean_json_string(json_str: str) -> str:
     if not json_str:
         return json_str
     
-    # Remove or replace problematic control characters
-    # Keep only valid JSON control characters: \", \\, \/, \b, \f, \n, \r, \t
-    cleaned = json_str
-    
-    # Remove null bytes and other control characters except valid JSON ones
-    cleaned = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', cleaned)
-    
-    # Fix common issues with quotes and backslashes
-    cleaned = cleaned.replace('\\"', '"').replace('\\\\', '\\')
-    
-    return cleaned
+    # Remove null bytes and other control characters that are invalid in JSON.
+    # Deliberately nothing else: rewriting escape sequences (e.g. \" -> ") can
+    # corrupt strings that were valid all along, which is worse than failing.
+    return re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', json_str)
 
 
 def safe_json_parse(json_str: str) -> dict:
@@ -72,18 +65,24 @@ def safe_json_parse(json_str: str) -> dict:
 
 def parse_date(date_str: Optional[str]) -> Optional[str]:
     """
-    Parse date from MM/DD/YYYY to YYYY-MM-DD format.
-    
+    Validate an ISO 8601 (YYYY-MM-DD) date string.
+
+    The extraction prompt requires ISO 8601 precisely because slash formats are
+    ambiguous (03/04/2025 is April 3rd in Belgium, March 4th in the US) and a
+    silently swapped day/month is a data-integrity error on medical data.
+    Anything that is not a valid ISO date is therefore rejected as None —
+    "unknown" is always safer than "guessed".
+
     Args:
-        date_str: Date string in MM/DD/YYYY format or None
-        
+        date_str: Candidate date string from the extraction model, or None
+
     Returns:
-        Date string in YYYY-MM-DD format or original string if parsing fails
+        The validated YYYY-MM-DD string, or None if absent/invalid
     """
     if not date_str:
         return None
     try:
-        return datetime.strptime(date_str, "%m/%d/%Y").strftime("%Y-%m-%d")
+        return datetime.strptime(date_str, "%Y-%m-%d").strftime("%Y-%m-%d")
     except ValueError:
-        logger.warning(f"Could not parse date: {date_str}. Returning as is.")
-        return date_str
+        logger.warning(f"Rejecting non-ISO test_date from extraction output: {date_str!r}")
+        return None

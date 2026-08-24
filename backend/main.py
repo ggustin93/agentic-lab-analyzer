@@ -9,7 +9,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from services.document_processor import DocumentProcessor
-from config.settings import settings # <-- MAKE SURE THIS IS IMPORTED
+from config.settings import settings
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -34,7 +34,6 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    # REPLACE the hard-coded list with the settings variable
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],

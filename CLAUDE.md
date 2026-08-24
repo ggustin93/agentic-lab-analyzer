@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Lab Insight Engine v1.1** - A professional-grade medical document analysis platform showcasing enterprise Angular 19 patterns, agent-based AI architecture, and production-ready testing infrastructure. Built as a portfolio piece demonstrating senior frontend engineering expertise with real-time processing, comprehensive testing, and modern TypeScript patterns.
+**DocBot AI** - A medical document analysis proof-of-concept showcasing Angular 19 patterns, an agent-based AI backend, and a tested full-stack architecture. Built as a portfolio piece; see README section 8 for the project's intended use and known security limitations, and `docs/adr/` for architecture decisions.
 
 ## Commands
 
@@ -82,7 +82,7 @@ docker-compose run --rm cypress  # Run E2E tests in container
 1. Document upload → `DocumentProcessor.process_document()` → Storage in Supabase
 2. Async agent pipeline: OCR extraction → AI analysis → Structured data persistence  
 3. SSE streaming of status updates via `/api/v1/documents/{id}/stream`
-4. Frontend consumes SSE for real-time UI updates using `DocumentAnalysisService.trackDocumentAnalysis()`
+4. Frontend consumes SSE for real-time UI updates via `DocumentAnalysisService` (one `EventSource` per in-flight document)
 
 ## Backend File Structure
 
@@ -106,7 +106,7 @@ backend/
 │   ├── processing_pipeline.py      # Multi-stage document processing workflow management
 │   └── storage_manager.py          # File storage operations and cloud storage integration
 ├── tests/
-│   ├── test_document_processor_refactored.py  # Comprehensive pipeline testing with mocks
+│   ├── test_document_processor.py  # Comprehensive pipeline testing with mocks
 │   ├── test_json_utils.py          # JSON parsing and data validation test suite
 │   └── test_mistral_ocr.py         # OCR service integration and error handling tests
 ├── Dockerfile.backend              # Production-ready containerization configuration
@@ -117,11 +117,11 @@ backend/
 
 ### Key Backend Patterns
 
-- **Agent Pattern**: Each AI service implements `BaseAgent` with consistent `process()` interface
+- **Agent Contracts**: The pipeline is typed against the `Protocol`s in `agents/base.py` (`OCRAgent`, `ExtractionAgentProtocol`, `InsightAgentProtocol`) and receives its agents by constructor injection, so implementations are swappable and tests use plain fakes
 - **Service Layer**: Clear separation between API routes, business logic, and data access
 - **Error Resilience**: Comprehensive exception handling with user-friendly error messages
 - **Type Safety**: Full Pydantic model validation throughout the processing pipeline
-- **Testing Strategy**: Unit tests with 100% coverage of critical paths and error scenarios
+- **Testing Strategy**: Unit tests over the pipeline's critical paths and error scenarios (see README section 5 for honest coverage status and gaps)
 
 ## Frontend Advanced Features
 
@@ -132,13 +132,13 @@ backend/
 - **OnPush Strategy**: Optimized change detection for all components
 - **Signal-based Architecture**: Reactive state management replacing RxJS where appropriate
 
-### Portfolio-Worthy Features
+### Notable Features
 - **Real-time Progress Tracking**: 4-stage visual pipeline (OCR → AI Analysis → Saving → Complete)
 - **Color-coded Status System**: Yellow/Blue/Purple/Green progression with animated indicators
-- **Professional Error Handling**: Comprehensive retry mechanisms with user feedback
-- **TypeScript Excellence**: Strict mode enabled with advanced type safety patterns
+- **Error Handling**: Retry mechanisms with user feedback via toasts
+- **TypeScript**: Strict mode enabled, no `any` in application code
 - **Component Composition**: Reusable, testable components following SOLID principles
-- **Performance Monitoring**: Lazy loading, OnPush optimization, and bundle analysis
+- **Performance**: OnPush change detection across components
 
 ### Advanced UI/UX Patterns
 - **Responsive Design**: Mobile-first approach with Tailwind CSS utility classes
@@ -170,8 +170,8 @@ this.documentStore.setUploadLoading(true);
 ## Testing Strategy
 
 ### Test Coverage Summary (Current Status)
-- ✅ **Frontend**: 22/22 unit tests passing (100% success rate)
-- ✅ **Backend**: 22/22 tests passing (100% success rate)  
+- ✅ **Frontend**: 22 unit tests passing
+- ✅ **Backend**: 23 tests passing
 - ✅ **Linting**: All files pass ESLint validation
 - ✅ **Build**: Production build successful (1.32 MB bundle)
 
@@ -189,12 +189,12 @@ this.documentStore.setUploadLoading(true);
   - API mocking for consistent testing
   - Cross-browser compatibility validation
 - **Performance Testing**: Bundle analysis and load testing
-- **CI/CD Pipeline**: GitHub Actions with automated testing on every commit
+- **CI/CD Pipeline**: GitHub Actions runs lint, frontend and backend unit tests, and the production build on every push
 
 ### Quality Assurance
 - **TypeScript Strict Mode**: Full type safety with no `any` types
 - **ESLint Configuration**: Enforced code quality and consistency
-- **Test-Driven Development**: Critical paths covered before implementation
+- **No console noise**: `no-console` ESLint rule (warn/error only) — health data must never reach the browser console
 - **Docker Testing Environment**: Consistent testing across all environments
 
 ## File Structure Notes
@@ -203,5 +203,5 @@ this.documentStore.setUploadLoading(true);
 - `backend/services/document_processor.py`: Core orchestration logic  
 - `backend/agents/`: AI agent implementations
 - `supabase/migrations/`: Database schema changes
-- `memory-bank/`: Project context and architectural decisions
-- `.cursor/rules/`: Cursor IDE configuration rules
+- `docs/adr/`: Architecture Decision Records (MADR format)
+- `docs/ai-workflow.md`: AI-assisted development workflow and its guardrails

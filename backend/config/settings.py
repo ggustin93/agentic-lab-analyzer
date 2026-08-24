@@ -12,10 +12,9 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_KEY: str
     SUPABASE_BUCKET_NAME: str = "health-docs"
-    
-    # ADD THIS LINE
-    CORS_ORIGINS: List[str] = ["http://localhost:4200"] 
-    
+
+    CORS_ORIGINS: List[str] = ["http://localhost:4200"]
+
     CHUTES_AI_ENDPOINT: str = "https://llm.chutes.ai/v1"
     CHUTES_AI_MODEL: str = "chutesai/Mistral-Small-3.2-24B-Instruct-2506"
     MISTRAL_OCR_MODEL: str = "mistral-ocr-latest"
