@@ -33,7 +33,7 @@ most of its value (see `001`–`004`).
 | [014](014-processing-task-lifecycle.md) | Processing task lifecycle | Medium | Could | Open ([#11](https://github.com/ggustin93/agentic-lab-analyzer/issues/11)) |
 | [015](015-ocr-quality-gate.md) | OCR quality gate with three-way routing | Medium | Could | Open ([#12](https://github.com/ggustin93/agentic-lab-analyzer/issues/12)) |
 | [016](016-repository-split.md) | Split DatabaseManager into repositories | Low | Could† | Open ([#13](https://github.com/ggustin93/agentic-lab-analyzer/issues/13)) |
-| [017](017-docling-local-ocr-adapter.md) | Local OCR adapter (Docling vs. PaddleOCR) | Low | Could | Open ([#14](https://github.com/ggustin93/agentic-lab-analyzer/issues/14)) |
+| [017](017-docling-local-ocr-adapter.md) | Local OCR adapters: modality routing (Docling / PaddleOCR) | Low | Could | Open ([#14](https://github.com/ggustin93/agentic-lab-analyzer/issues/14)) |
 
 ## Prioritization method
 
