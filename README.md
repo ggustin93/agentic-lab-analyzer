@@ -161,16 +161,7 @@ Persistence sits behind two `Protocol` ports (`backend/services/ports.py`), sele
 
 ## 5. Testing Strategy
 
-> ⚠️ **Testing Disclaimer**
-> 
-> The current testing implementation provides a solid foundation but requires significant enhancement for production readiness. Key areas for improvement include:
-> - **Coverage Gaps:** Missing edge case testing for complex reference range parsing scenarios
-> - **Integration Testing:** Limited backend-frontend integration testing beyond mocked scenarios  
-> - **Performance Testing:** No load testing or performance benchmarking implemented
-> - **Security Testing:** Authentication, authorization, and data validation testing incomplete
-> - **Accessibility Testing:** No automated a11y testing suite implemented
-> 
-> The testing approach follows an "80/20" strategy focusing on high-impact, critical user journeys rather than comprehensive coverage.
+> **Scope:** testing follows an 80/20 strategy — the critical user journeys are covered (see 5.1), exhaustive coverage is not the goal for a proof-of-concept. Known gaps are tracked in the [backlog](docs/backlog/013-test-coverage-gaps.md).
 
 ### 5.1 What is tested today
 
