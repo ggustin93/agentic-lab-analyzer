@@ -80,7 +80,8 @@ benchmark: PII/PHI redaction *before* the LLM stage (NER-based, with the
 irony acknowledged that redaction models also need evaluation), and local
 models trading accuracy for data locality — Docling (layout- and
 table-aware, markdown output matching our pipeline's existing contract; see
-backlog 017) for document parsing, with a small instruction-tuned LLM for
+backlog 017) and PaddleOCR's PP-StructureV3 as full-page candidates —
+SLANet_plus as a table-structure specialist — with a small instruction-tuned LLM for
 extraction. The comparison itself — a quality/privacy frontier on a synthetic
 corpus — would be the contribution; picking a point on it is a product
 decision.
