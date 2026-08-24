@@ -1,6 +1,6 @@
 # 006 — Generic client-facing error messages
 
-- Severity: Medium · Priority: Should · Labels: security, backend
+- Severity: Medium · Priority: Should · Labels: security, backend · Status: Done
 
 ## Context
 

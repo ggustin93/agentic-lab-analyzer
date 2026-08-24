@@ -16,7 +16,7 @@ from supabase import create_client, Client
 from config.settings import settings
 from services.storage_manager import StorageManager
 from services.database_manager import DatabaseManager
-from services.processing_pipeline import ProcessingPipeline
+from services.processing_pipeline import ProcessingPipeline, PROCESSING_ERROR_MESSAGE
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class DocumentProcessor:
             
         except Exception as e:
             logger.error(f"Document processing error for {document_id}: {e}", exc_info=True)
-            self.database_manager.mark_document_error(document_id, str(e))
+            self.database_manager.mark_document_error(document_id, PROCESSING_ERROR_MESSAGE)
             raise
     
     async def delete_document(self, document_id: str) -> bool:

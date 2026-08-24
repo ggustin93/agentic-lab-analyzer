@@ -1,6 +1,6 @@
 # 009 — Non-blocking OCR HTTP client
 
-- Severity: High · Priority: Should · Labels: reliability, backend
+- Severity: High · Priority: Should · Labels: reliability, backend · Status: Done
 
 ## Context
 

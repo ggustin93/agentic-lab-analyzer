@@ -1,6 +1,6 @@
 # 001 — Server-side upload validation
 
-- Severity: High · Priority: Should · Labels: security, backend
+- Severity: High · Priority: Should · Labels: security, backend · Status: Done
 
 ## Context
 

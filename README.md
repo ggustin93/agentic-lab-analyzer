@@ -217,7 +217,7 @@ A comprehensive, multi-layered testing strategy ensures high confidence in the a
 - Signal-based state management tests validated
 - Component interaction and UI logic verified
 
-**✅ Backend Tests: 23 PASSED**  
+**✅ Backend Tests: 31 PASSED**  
 - Complete document lifecycle testing verified
 - Agent integration and processing pipeline validated
 - Database operations and error handling confirmed
@@ -381,9 +381,7 @@ test documents (`scripts/purge_demo_data.py` empties the demo environment).
 | 1 | **No authentication** on API endpoints | Anyone reaching the API can list/read/delete all documents | Supabase Auth (JWT) + per-user scoping on every query |
 | 2 | **Public storage bucket** with permanent URLs | Documents readable by anyone with the link | Private bucket + short-lived signed URLs |
 | 3 | **No Row Level Security** in the database | Tables reachable via Supabase REST with the anon key | RLS policies per `user_id` on all tables and `storage.objects` (see ADR-005) |
-| 4 | **No server-side upload validation** | Oversized/arbitrary files accepted (client-side checks are bypassable) | Size + magic-bytes validation in the endpoint, before any storage |
-| 5 | **Unbounded SSE streams** | Streams for unknown IDs poll forever (resource exhaustion) | 404 on unknown IDs, bounded stream lifetime, disconnect detection |
-| 6 | **No rate limiting** | Anonymous uploads/retries trigger paid LLM calls | Rate limiting + per-document processing lock |
+| 4 | **No rate limiting** | Anonymous uploads/retries trigger paid LLM calls | Rate limiting + per-document processing lock |
 
 These are acceptable **only** because the project runs locally with synthetic
 data. Items 1–3 are the prerequisite to any deployment. Each limitation is
@@ -401,6 +399,10 @@ robustness, calibration) are collected in
   Belgian lab report is a data-integrity error, not a formatting detail).
 - Document-derived text is treated as **untrusted input** end to end; AI
   outputs are shape-validated with Pydantic before persistence.
+- Uploads are **validated server-side** (bounded size, magic-bytes content
+  type — a rejected file leaves no trace), SSE streams are bounded (404 on
+  unknown ids, lifetime cap, disconnect detection), and client-facing error
+  messages are generic: exception details stay in server logs.
 - The AI-assisted development process itself has guardrails, documented in
   [`docs/ai-workflow.md`](docs/ai-workflow.md).
 
