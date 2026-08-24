@@ -57,7 +57,7 @@ reports at all (should reject with a distinct reason).
 
 Switching OCR providers (only justified if the gate's error analysis shows
 OCR — not extraction or parsing — is the measured bottleneck); per-lab
-fine-tuned OCR models (see research notes §8 for why this is not pursued);
+fine-tuned OCR models (see research notes §7 for why this is not pursued);
 a full review/annotation workflow with audit trail.
 
 ## Assumptions / open questions
