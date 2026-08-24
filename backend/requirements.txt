@@ -15,7 +15,7 @@ aiofiles==23.2.0
 python-dotenv==1.2.3
 
 # Image Processing (minimal)
-Pillow==10.4.0  # >=10.2: CVE-2023-50447
+Pillow==12.3.0  # >=10.2: CVE-2023-50447
 
 # Development Tools (minimal)
 pytest==7.4.3
