@@ -16,15 +16,15 @@ most of its value (see `001`–`004`).
 
 | # | Title | Severity | Priority | Status |
 |---|-------|----------|----------|--------|
-| [001](001-server-side-upload-validation.md) | Server-side upload validation | High | Should | Open |
-| [002](002-bounded-sse-streams.md) | Bounded SSE streams | High | Should | Open |
+| [001](001-server-side-upload-validation.md) | Server-side upload validation | High | Should | Done |
+| [002](002-bounded-sse-streams.md) | Bounded SSE streams | High | Should | Done |
 | [003](003-authentication-and-user-scoping.md) | Authentication & per-user scoping | Critical | Could* | Open |
 | [004](004-rls-and-private-storage.md) | Row Level Security & private storage | Critical | Could* | Open |
 | [005](005-rate-limiting.md) | Rate limiting & processing locks | High | Should | Open |
-| [006](006-generic-error-messages.md) | Generic client-facing error messages | Medium | Should | Open |
+| [006](006-generic-error-messages.md) | Generic client-facing error messages | Medium | Should | Done |
 | [007](007-deterministic-out-of-range.md) | Deterministic out-of-range flag | High | Should | Open |
 | [008](008-native-structured-outputs.md) | Native structured outputs | Medium | Should | Open |
-| [009](009-async-ocr-client.md) | Non-blocking OCR HTTP client | High | Should | Open |
+| [009](009-async-ocr-client.md) | Non-blocking OCR HTTP client | High | Should | Done |
 | [010](010-analysis-provenance.md) | Analysis provenance metadata | Medium | Should | Open |
 | [011](011-prompt-evaluation-harness.md) | Prompt evaluation harness | Medium | Could | Open |
 | [012](012-sanitize-ai-rendered-html.md) | Sanitize AI-rendered HTML | Medium | Should | Open |

@@ -15,7 +15,7 @@ from models.health_models import HealthDataExtraction, HealthInsights
 class OCRAgent(Protocol):
     """Extracts structured OCR data (pages of markdown) from a document URL."""
 
-    def extract_structured_data(self, file_url: str) -> Dict[str, Any]:
+    async def extract_structured_data(self, file_url: str) -> Dict[str, Any]:
         ...
 
 

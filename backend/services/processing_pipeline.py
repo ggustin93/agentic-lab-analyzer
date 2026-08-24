@@ -19,6 +19,12 @@ from services.insight_agent import InsightAgent
 logger = logging.getLogger(__name__)
 
 
+# User-facing message stored in documents.error_message: the real exception
+# (with stack trace) goes to server logs only — raw exception text can leak
+# infrastructure details to the client (backlog 006).
+PROCESSING_ERROR_MESSAGE = "Processing failed. Please retry the analysis."
+
+
 # Processing stages constants
 class ProcessingStage:
     """Document processing stage constants for consistent stage tracking"""
@@ -63,6 +69,13 @@ class ProcessingPipeline:
         self.ocr_agent: OCRAgent = ocr_agent or MistralOCRService()
         self.extraction_agent: ExtractionAgentProtocol = extraction_agent or ExtractionAgent()
         self.insight_agent: InsightAgentProtocol = insight_agent or InsightAgent()
+
+    async def aclose(self) -> None:
+        """Close the agents' HTTP clients (called from the app lifespan)."""
+        for agent in (self.ocr_agent, self.extraction_agent, self.insight_agent):
+            close = getattr(agent, "close", None)
+            if close:
+                await close()
     
     async def process_document_async(self, document_id: str, file_url: str, filename: str) -> None:
         """
@@ -95,7 +108,7 @@ class ProcessingPipeline:
             
         except Exception as e:
             logger.error(f"❌ Processing pipeline failed for document {document_id}: {e}", exc_info=True)
-            self.db_manager.mark_document_error(document_id, str(e))
+            self.db_manager.mark_document_error(document_id, PROCESSING_ERROR_MESSAGE)
             raise
     
     async def _execute_ocr_stage(self, document_id: str, file_url: str) -> Dict:
@@ -115,7 +128,7 @@ class ProcessingPipeline:
         logger.info(f"📄 Stage 1/4: Starting OCR extraction for {document_id}")
         self.db_manager.update_processing_stage(document_id, ProcessingStage.OCR_EXTRACTION)
         
-        structured_ocr_data = self.ocr_agent.extract_structured_data(file_url)
+        structured_ocr_data = await self.ocr_agent.extract_structured_data(file_url)
         if not structured_ocr_data or not structured_ocr_data.get('pages'):
             raise ValueError("OCR process yielded no pages or data")
         
@@ -213,7 +226,7 @@ class ProcessingPipeline:
             
         except Exception as e:
             logger.error(f"Error saving document data for {document_id}: {e}", exc_info=True)
-            self.db_manager.mark_document_error(document_id, str(e))
+            self.db_manager.mark_document_error(document_id, PROCESSING_ERROR_MESSAGE)
             raise
     
     async def retry_processing(self, document_id: str) -> bool:

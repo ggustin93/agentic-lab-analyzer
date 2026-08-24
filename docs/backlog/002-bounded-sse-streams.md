@@ -1,6 +1,6 @@
 # 002 — Bounded SSE streams
 
-- Severity: High · Priority: Should · Labels: security, backend, reliability
+- Severity: High · Priority: Should · Labels: security, backend, reliability · Status: Done
 
 ## Context
 

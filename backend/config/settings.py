@@ -15,6 +15,10 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: List[str] = ["http://localhost:4200"]
 
+    # Upload limits — enforced server-side (client-side checks are a UX
+    # convenience, not a control)
+    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # bytes
+
     CHUTES_AI_ENDPOINT: str = "https://llm.chutes.ai/v1"
     CHUTES_AI_MODEL: str = "chutesai/Mistral-Small-3.2-24B-Instruct-2506"
     MISTRAL_OCR_MODEL: str = "mistral-ocr-latest"
