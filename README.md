@@ -225,12 +225,9 @@ recorded as ADRs in [`docs/adr/`](docs/adr/).
 ### 8.1 Intended use
 
 DocBot AI is an **educational tool for exploring AI-assisted document
-analysis**. It is not a medical device, provides no diagnosis, and must not
-be used for clinical decisions — every AI output carries a server-enforced
-disclaimer. This bounded intended use is a product decision: it keeps the
-project outside medical-device (MDR) and high-risk AI qualification, and it
-is why the PoC must never process real patient data beyond the author's own
-test documents (`scripts/purge_demo_data.py` empties the demo environment).
+analysis** — not a medical device, and not a substitute for professional
+advice. Every AI output carries a server-enforced disclaimer, and the demo
+only ever processes synthetic documents.
 
 ### 8.2 Known security limitations (deliberate PoC scope)
 
