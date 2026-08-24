@@ -5,7 +5,7 @@ python-multipart==0.0.18  # >=0.0.18: CVE-2024-24762, CVE-2024-53981
 
 # Data Validation & Models
 pydantic==2.8.2
-pydantic-settings==2.1.0
+pydantic-settings==2.15.0
 
 # HTTP Client & Async
 httpx==0.27.2
