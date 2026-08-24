@@ -32,7 +32,7 @@ most of its value (see `001`–`004`).
 | [014](014-processing-task-lifecycle.md) | Processing task lifecycle | Medium | Could | Open |
 | [015](015-ocr-quality-gate.md) | OCR quality gate with three-way routing | Medium | Could | Open |
 | [016](016-repository-split.md) | Split DatabaseManager into repositories | Low | Could† | Open |
-| [017](017-docling-local-ocr-adapter.md) | Docling-based local OCR adapter | Low | Could | Open |
+| [017](017-docling-local-ocr-adapter.md) | Local OCR adapter (Docling vs. PaddleOCR) | Low | Could | Open |
 
 ## Prioritization method
 
@@ -57,7 +57,7 @@ goal, where 003/004 become non-negotiable Musts).
 | 004 RLS & private storage | 4 | 70 % | 2 d | 1.4 | Could* |
 | 014 Processing task lifecycle | 2 | 90 % | 0.5 d | 3.6 | Could |
 | 016 Repository split | 1 | 90 % | 1 d | 0.9 | Could† |
-| 017 Docling local OCR adapter | 3 | 60 % | 2 d | 0.9 | Could |
+| 017 Local OCR adapter (Docling / PaddleOCR) | 3 | 60 % | 2 d | 0.9 | Could |
 
 † Deferred with an explicit trigger (see the issue) — recorded so the deferral is a decision, not an omission.
 
