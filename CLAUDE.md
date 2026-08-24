@@ -101,14 +101,18 @@ backend/
 │   ├── document_processor.py       # Core orchestration logic for document processing pipeline
 │   ├── extraction_agent.py         # OCR text extraction using Mistral AI vision models
 │   ├── insight_agent.py            # Clinical analysis and insights generation with AI
-│   ├── json_utils.py               # Robust JSON parsing with error handling and cleanup
+│   ├── document_presenter.py       # Pure response-shaping functions (persistence never formats API output)
+│   ├── json_utils.py               # Safe JSON parsing and strict ISO 8601 date validation
 │   ├── mistral_ocr_service.py      # Mistral AI integration for optical character recognition
 │   ├── processing_pipeline.py      # Multi-stage document processing workflow management
 │   └── storage_manager.py          # File storage operations and cloud storage integration
 ├── tests/
 │   ├── test_document_processor.py  # Comprehensive pipeline testing with mocks
-│   ├── test_json_utils.py          # JSON parsing and data validation test suite
-│   └── test_mistral_ocr.py         # OCR service integration and error handling tests
+│   ├── conftest.py                 # Injects dummy env config so the mocked suite runs anywhere
+│   ├── test_api_validation.py      # Upload validation, bounded SSE, generic errors (TestClient)
+│   ├── test_document_presenter.py  # Presenter pure functions
+│   ├── test_json_utils.py          # JSON parsing and ISO date validation
+│   └── test_mistral_ocr.py         # Async OCR service tests (mocked httpx)
 ├── Dockerfile.backend              # Production-ready containerization configuration
 ├── main.py                         # FastAPI application entry point and API route definitions
 ├── README.md                       # Backend-specific documentation and setup instructions
@@ -118,6 +122,9 @@ backend/
 ### Key Backend Patterns
 
 - **Agent Contracts**: The pipeline is typed against the `Protocol`s in `agents/base.py` (`OCRAgent`, `ExtractionAgentProtocol`, `InsightAgentProtocol`) and receives its agents by constructor injection, so implementations are swappable and tests use plain fakes
+- **Composition Root**: `main.py` builds `DocumentProcessor` lazily behind `get_document_processor()` and injects it via FastAPI `Depends`; tests substitute it with `app.dependency_overrides` (ADR-007)
+- **Presenter**: API response shaping lives in `services/document_presenter.py` as pure functions — the persistence layer never formats output
+- **Guaranteed guardrails**: the medical disclaimer is enforced server-side, and `test_date` must be ISO 8601 (ambiguous dates become null, never guessed)
 - **Service Layer**: Clear separation between API routes, business logic, and data access
 - **Error Resilience**: Comprehensive exception handling with user-friendly error messages
 - **Type Safety**: Full Pydantic model validation throughout the processing pipeline
@@ -171,7 +178,7 @@ this.documentStore.setUploadLoading(true);
 
 ### Test Coverage Summary (Current Status)
 - ✅ **Frontend**: 22 unit tests passing
-- ✅ **Backend**: 31 tests passing
+- ✅ **Backend**: 36 tests passing
 - ✅ **Linting**: All files pass ESLint validation
 - ✅ **Build**: Production build successful (1.32 MB bundle)
 
