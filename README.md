@@ -1,10 +1,13 @@
 # DocBot AI – Health Document Analyzer
 
-> ⚠️ **Important Notice**
->
-> This repository is a proof-of-concept, initiated in July 2025. The codebase is under active development and may contain incomplete features or vulnerabilities. It is not intended for production or medical use.
+[![CI](https://img.shields.io/github/actions/workflow/status/ggustin93/agentic-lab-analyzer/ci.yml?branch=main&label=CI)](https://github.com/ggustin93/agentic-lab-analyzer/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE.md)
+![Angular 19](https://img.shields.io/badge/Angular-19-dd0031?logo=angular)
+![Python 3.11](https://img.shields.io/badge/Python-3.11-3776ab?logo=python&logoColor=white)
 
-This project is a full-stack application designed to analyze medical lab documents. It demonstrates a modern software architecture using Angular, FastAPI, and a specialized agent-based backend system to process and interpret health data.
+This project is a full-stack application designed to analyze medical lab documents. It demonstrates a modern software architecture using Angular, FastAPI, and a specialized agent-based backend system to process and interpret health data. The engineering process is documented as first-class output: [ADRs](docs/adr/), a [specified backlog](docs/backlog/), [feature specs](docs/specs/), and the [AI-assisted workflow and its guardrails](docs/ai-workflow.md).
+
+> **Proof of concept** (July 2025 → ongoing). Not intended for production or medical use; the security scope is stated openly in [Section 8](#8-security-privacy--known-limitations).
 
 ## Table of Contents
 
@@ -21,17 +24,17 @@ This project is a full-stack application designed to analyze medical lab documen
 
 ## 1. Features
 
-*   **Secure Document Upload**: Upload PDF or image files of lab reports via drag-and-drop.
+*   **Document Upload**: Upload PDF or image files of lab reports via drag-and-drop.
 *   **Automated Data Extraction**: Uses OCR and AI to parse text and identify markers, values, and reference ranges.
-*   **Out-of-Range Highlighting**: Automatically flags lab values that fall outside standard ranges for quick review.
+*   **Out-of-Range Highlighting**: Flags values outside the parsed reference range (LLM-assisted today; deterministic backend flagging is [backlog 007](docs/backlog/007-deterministic-out-of-range.md)).
 *   **AI-Generated Insights**: Provides clear, human-readable summaries and interpretations of the lab data.
 *   **Integrated Document Viewer**: Allows for easy cross-referencing between the extracted data and the original document.
-*   **Persistent Analysis History**: View, manage, and re-process previously analyzed documents.
+*   **Persistent Analysis History**: View, delete, and re-process previously analyzed documents.
 *   **Real-Time Processing Updates**: The UI reflects the document's analysis status in real time using Server-Sent Events (SSE).
 
 ## 2. Preview
 
-Here's a visual overview of the application's key features:
+A visual overview of the application's key features. All screenshots show synthetic lab data — no real documents are ever processed.
 
 ### 2.1 Document Upload & Dashboard
 ![Dashboard and Upload Interface](assets/screenshot-1.png)
@@ -39,17 +42,15 @@ Here's a visual overview of the application's key features:
 
 ### 2.2 Lab Data Analysis Results
 ![Lab Data Analysis](assets/screenshot-2.png)
-*Structured extraction of lab values with automatic highlighting of out-of-range results. The interface shows extracted markers, values, units, and reference ranges in an easy-to-read format.*
+*Structured extraction of lab values with highlighting of out-of-range results — markers, values, units, and reference ranges.*
 
 ### 2.3 AI-Generated Medical Insights
 ![Medical Insights Report](assets/screenshot-3.png)
-*AI-powered analysis providing summaries, key findings, and recommendations based on the extracted lab data. The insights tab offers human-readable interpretations of the medical data.*
+*Summaries, key findings, and recommendations generated from the extracted data.*
 
 ## 3. Architecture Overview
 
-DocBot AI implements a multi-tier architecture designed around event-driven processing, real-time communication, and specialized AI agents. The system orchestrates complex document analysis workflows through a chain of responsibility pattern, where each component has a distinct role in transforming raw medical documents into structured, actionable health insights.
-
-**How it works, in five steps:**
+DocBot AI is a multi-tier system: an Angular frontend, a FastAPI backend, and a pipeline of specialized AI agents. **How it works, in five steps:**
 
 1. **OCR extraction** — `MistralOCRService` turns the uploaded PDF/image into per-page markdown, preserving table structure.
 2. **Structured extraction** — `ExtractionAgent` (Mistral Large) parses that markdown into typed health markers, validated with Pydantic — behavior, business rules and edge cases are specified in [docs/specs/lab-marker-extraction.md](docs/specs/lab-marker-extraction.md).
@@ -134,7 +135,7 @@ Domain services (`ReferenceRangeParserService`, `LabMarkerInfoService`) keep cli
 The Python backend uses FastAPI for its asynchronous capabilities and implements a specialized agent architecture with clear separation of concerns:
 
 - **DocumentProcessor**: Main orchestrator for the document processing workflow
-- **StorageManager**: Handles all file storage operations with Supabase storage
+- **StorageManager**: File storage behind the `FileStorage` port — local uploads folder by default, Supabase Storage optional (ADR-008)
 - **DatabaseManager**: Manages all database operations including CRUD and analysis persistence
 - **ProcessingPipeline**: Coordinates OCR extraction and AI analysis with progress tracking
 - **ExtractionAgent**: Structured health data extraction (Mistral Large)
@@ -155,8 +156,8 @@ Persistence sits behind two `Protocol` ports (`backend/services/ports.py`), sele
 | **Frontend**  | Angular 19, TypeScript, Tailwind CSS, Signals, ng2-pdf-viewer |
 | **Backend**   | Python 3.11, FastAPI, Pydantic, httpx, Specialized Agent Architecture  |
 | **AI / ML**   | Mistral AI (OCR), Chutes.AI (Analysis), Structured Health Data Models  |
-| **Database**  | Supabase (PostgreSQL)                                                   |
-| **Storage**   | Supabase Storage                                                        |
+| **Database**  | SQLite (default) / Supabase PostgreSQL (optional — ADR-008)             |
+| **Storage**   | Local filesystem (default) / Supabase Storage (optional)                |
 | **DevOps**    | Docker, Docker Compose, GitHub Actions, Node 20                        |
 
 ## 5. Testing Strategy
@@ -166,7 +167,7 @@ Persistence sits behind two `Protocol` ports (`backend/services/ports.py`), sele
 ### 5.1 What is tested today
 
 - **Frontend — 22 unit tests** (Jasmine/Karma, randomized order): the full upload lifecycle with a mocked HTTP layer and no state pollution on errors; clinical value-status logic in `DataTableComponent` (normal / high / low / boundary and malformed ranges); toast service behavior.
-- **Backend — 36 tests** (pytest, fully mocked — `tests/conftest.py` injects dummy config, so no secret is needed): processor lifecycle with retry logic, API-level upload validation and bounded SSE (via `TestClient` + `dependency_overrides`), the async OCR service, ISO date validation, presenter pure functions.
+- **Backend — 49 tests** (pytest — `tests/conftest.py` injects dummy config, so no secret is needed): processor lifecycle with retry logic, API-level upload validation and bounded SSE (via `TestClient` + `dependency_overrides`), the async OCR service, ISO date validation, presenter pure functions, and contract tests running the local persistence adapters against a real SQLite database (ADR-008).
 - **E2E — Cypress** (local/Docker, not yet in CI): the happy path with a mocked API, and the empty state.
 - **Not yet covered** (tracked in [#10](https://github.com/ggustin93/agentic-lab-analyzer/issues/10)): `reference-range-parser.service.ts`, the signal store, SSE message handling, coverage measurement in CI.
 
@@ -255,8 +256,8 @@ only ever processes synthetic documents.
 | # | Limitation | Risk | Planned remediation |
 |---|------------|------|---------------------|
 | 1 | **No authentication** on API endpoints | Anyone reaching the API can list/read/delete all documents | Supabase Auth (JWT) + per-user scoping on every query |
-| 2 | **Public storage bucket** with permanent URLs | Documents readable by anyone with the link | Private bucket + short-lived signed URLs |
-| 3 | **No Row Level Security** in the database | Tables reachable via Supabase REST with the anon key | RLS policies per `user_id` on all tables and `storage.objects` (see ADR-005) |
+| 2 | **Public storage bucket** with permanent URLs *(Supabase mode)* | Documents readable by anyone with the link | Private bucket + short-lived signed URLs |
+| 3 | **No Row Level Security** in the database *(Supabase mode)* | Tables reachable via Supabase REST with the anon key | RLS policies per `user_id` on all tables and `storage.objects` (see ADR-005) |
 | 4 | **No rate limiting** | Anonymous uploads/retries trigger paid LLM calls | Rate limiting + per-document processing lock |
 
 These are acceptable **only** because the project runs locally with synthetic

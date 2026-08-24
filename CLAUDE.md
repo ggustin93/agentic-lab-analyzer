@@ -181,7 +181,7 @@ this.documentStore.setUploadLoading(true);
 
 ### Test Coverage Summary (Current Status)
 - ✅ **Frontend**: 22 unit tests passing
-- ✅ **Backend**: 36 tests passing
+- ✅ **Backend**: 49 tests passing (incl. contract tests for the local persistence adapters)
 - ✅ **Linting**: All files pass ESLint validation
 - ✅ **Build**: Production build successful (1.32 MB bundle)
 
