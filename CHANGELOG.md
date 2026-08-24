@@ -2,6 +2,13 @@
 
 Notable changes, grouped by phase. Dates reflect the actual commit history.
 
+## 2026-08: Documentation and demo pass
+
+- End-to-end demo GIF recorded against the live local-mode pipeline with a synthetic lab report (`assets/demo.gif`), embedded in the README preview.
+- README: status badges (CI, MIT, Angular, Python), condensed testing disclaimer, architecture diagram redrawn in Mermaid with the corrected pipeline ownership and the dual-persistence layer.
+- Consistency pass: local-first mode propagated to every section that still described Supabase as the only backend; backend test count corrected to 49.
+- Editorial pass across all documentation: em dashes replaced with plain punctuation, ADR and backlog titles normalized to `NNN: Title`.
+
 ## 2026-08: Local-first persistence (ADR-008)
 
 - `STORAGE_MODE=local` (new default): SQLite + local uploads folder behind new `DocumentRepository` / `FileStorage` ports; the repo now runs with only two AI keys, no cloud database account.
