@@ -46,3 +46,7 @@ npm-debug.log*
 
 # Angular cache
 .angular/
+
+# Local mode data (ADR-008)
+backend/data/
+backend/uploads/

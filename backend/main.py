@@ -20,11 +20,26 @@ logger = logging.getLogger(__name__)
 @lru_cache
 def get_document_processor() -> DocumentProcessor:
     """
-    Composition root: the processor (and its Supabase client and agents) is
-    built lazily on first use and injected into endpoints via Depends, so
-    tests substitute it with dependency_overrides instead of patching.
+    Composition root: the persistence adapters are chosen from STORAGE_MODE
+    (ADR-008), the processor is built lazily on first use and injected into
+    endpoints via Depends, so tests substitute it with dependency_overrides
+    instead of patching.
     """
-    return DocumentProcessor()
+    if settings.STORAGE_MODE == "supabase":
+        from supabase import create_client
+        from services.database_manager import DatabaseManager
+        from services.storage_manager import StorageManager
+
+        client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        return DocumentProcessor(DatabaseManager(client), StorageManager(client))
+
+    from services.local_database_manager import LocalDatabaseManager
+    from services.local_storage_manager import LocalStorageManager
+
+    return DocumentProcessor(
+        LocalDatabaseManager(settings.DB_PATH),
+        LocalStorageManager(settings.UPLOAD_DIR),
+    )
 
 # Content types accepted for upload, verified from magic bytes — never from
 # the filename or the client-declared content type (backlog 001)
@@ -216,6 +231,15 @@ async def retry_document_processing(
 
 
 app.include_router(api_router_v1)
+
+# Local mode: serve uploaded files over HTTP for the frontend PDF viewer and
+# the OCR client (ADR-008). StaticFiles handles path normalization/traversal.
+if settings.STORAGE_MODE == "local":
+    from pathlib import Path
+    from fastapi.staticfiles import StaticFiles
+
+    Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+    app.mount("/api/v1/files", StaticFiles(directory=settings.UPLOAD_DIR), name="files")
 
 
 # Root endpoint for basic health check

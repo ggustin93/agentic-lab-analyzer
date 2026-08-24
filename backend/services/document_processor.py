@@ -11,11 +11,7 @@ import os
 import logging
 from typing import Dict, List, Optional
 
-from supabase import create_client, Client
-
-from config.settings import settings
-from services.storage_manager import StorageManager
-from services.database_manager import DatabaseManager
+from services.ports import DocumentRepository, FileStorage
 from services.processing_pipeline import ProcessingPipeline, PROCESSING_ERROR_MESSAGE
 
 logger = logging.getLogger(__name__)
@@ -24,23 +20,19 @@ logger = logging.getLogger(__name__)
 class DocumentProcessor:
     """
     Main service for processing health documents through OCR and AI analysis pipeline.
-    
-    Refactored to use specialized managers for different concerns:
-    - StorageManager: File upload/deletion operations
-    - DatabaseManager: All database operations
+
+    Depends only on the persistence ports (ADR-008) — the concrete adapters
+    (local SQLite / Supabase) are chosen and injected by the composition root
+    in main.py:
+    - FileStorage: file upload/deletion operations
+    - DocumentRepository: all database operations
     - ProcessingPipeline: OCR + AI analysis workflow
-    
-    This provides clean separation of concerns and improved maintainability.
     """
-    
-    def __init__(self):
-        """Initialize the document processor with required managers."""
-        # Initialize Supabase client
-        self.supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        
-        # Initialize specialized managers
-        self.storage_manager = StorageManager(self.supabase)
-        self.database_manager = DatabaseManager(self.supabase)
+
+    def __init__(self, database_manager: DocumentRepository, storage_manager: FileStorage):
+        """Initialize the document processor with injected persistence adapters."""
+        self.storage_manager = storage_manager
+        self.database_manager = database_manager
         self.processing_pipeline = ProcessingPipeline(self.database_manager)
     
     # === PUBLIC API METHODS ===
