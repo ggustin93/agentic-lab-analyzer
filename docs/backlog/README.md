@@ -30,6 +30,7 @@ most of its value (see `001`–`004`).
 | [012](012-sanitize-ai-rendered-html.md) | Sanitize AI-rendered HTML | Medium | Should | Open |
 | [013](013-test-coverage-gaps.md) | Close targeted test coverage gaps | Medium | Should | Open |
 | [014](014-processing-task-lifecycle.md) | Processing task lifecycle | Medium | Could | Open |
+| [015](015-ocr-quality-gate.md) | OCR quality gate with three-way routing | Medium | Could | Open |
 
 \* Deliberately scheduled behind a documented mitigation: the project runs
 locally with synthetic data, and README section 8 states these limitations
