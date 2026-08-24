@@ -24,7 +24,7 @@ jobs:
 
       # Step 2: Set up Node.js environment for consistency.
       - name: Setup Node.js v20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: 'npm' # Cache npm packages for faster subsequent runs.
