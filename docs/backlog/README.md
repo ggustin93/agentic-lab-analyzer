@@ -6,7 +6,8 @@ triaged and prioritized deliberately. Each item follows the same
 specification template — expected behavior, business rules, edge cases,
 constraints, validation intent (acceptance criteria), what is intentionally
 out of scope, and open questions — so that it can be converted into a GitHub
-issue as-is.
+issue as-is. Open items are mirrored as GitHub issues (linked in the table);
+the files here remain the spec of record.
 
 Two prioritization lenses are used and they intentionally disagree:
 **severity** reflects technical risk; **priority** reflects value ÷ effort
@@ -18,21 +19,21 @@ most of its value (see `001`–`004`).
 |---|-------|----------|----------|--------|
 | [001](001-server-side-upload-validation.md) | Server-side upload validation | High | Should | Done |
 | [002](002-bounded-sse-streams.md) | Bounded SSE streams | High | Should | Done |
-| [003](003-authentication-and-user-scoping.md) | Authentication & per-user scoping | Critical | Could* | Open |
-| [004](004-rls-and-private-storage.md) | Row Level Security & private storage | Critical | Could* | Open |
-| [005](005-rate-limiting.md) | Rate limiting & processing locks | High | Should | Open |
+| [003](003-authentication-and-user-scoping.md) | Authentication & per-user scoping | Critical | Could* | Open ([#2](https://github.com/ggustin93/agentic-lab-analyzer/issues/2)) |
+| [004](004-rls-and-private-storage.md) | Row Level Security & private storage | Critical | Could* | Open ([#3](https://github.com/ggustin93/agentic-lab-analyzer/issues/3)) |
+| [005](005-rate-limiting.md) | Rate limiting & processing locks | High | Should | Open ([#4](https://github.com/ggustin93/agentic-lab-analyzer/issues/4)) |
 | [006](006-generic-error-messages.md) | Generic client-facing error messages | Medium | Should | Done |
-| [007](007-deterministic-out-of-range.md) | Deterministic out-of-range flag | High | Should | Open |
-| [008](008-native-structured-outputs.md) | Native structured outputs | Medium | Should | Open |
+| [007](007-deterministic-out-of-range.md) | Deterministic out-of-range flag | High | Should | Open ([#5](https://github.com/ggustin93/agentic-lab-analyzer/issues/5)) |
+| [008](008-native-structured-outputs.md) | Native structured outputs | Medium | Should | Open ([#6](https://github.com/ggustin93/agentic-lab-analyzer/issues/6)) |
 | [009](009-async-ocr-client.md) | Non-blocking OCR HTTP client | High | Should | Done |
-| [010](010-analysis-provenance.md) | Analysis provenance metadata | Medium | Should | Open |
-| [011](011-prompt-evaluation-harness.md) | Prompt evaluation harness | Medium | Could | Open |
-| [012](012-sanitize-ai-rendered-html.md) | Sanitize AI-rendered HTML | Medium | Should | Open |
-| [013](013-test-coverage-gaps.md) | Close targeted test coverage gaps | Medium | Should | Open |
-| [014](014-processing-task-lifecycle.md) | Processing task lifecycle | Medium | Could | Open |
-| [015](015-ocr-quality-gate.md) | OCR quality gate with three-way routing | Medium | Could | Open |
-| [016](016-repository-split.md) | Split DatabaseManager into repositories | Low | Could† | Open |
-| [017](017-docling-local-ocr-adapter.md) | Local OCR adapter (Docling vs. PaddleOCR) | Low | Could | Open |
+| [010](010-analysis-provenance.md) | Analysis provenance metadata | Medium | Should | Open ([#7](https://github.com/ggustin93/agentic-lab-analyzer/issues/7)) |
+| [011](011-prompt-evaluation-harness.md) | Prompt evaluation harness | Medium | Could | Open ([#8](https://github.com/ggustin93/agentic-lab-analyzer/issues/8)) |
+| [012](012-sanitize-ai-rendered-html.md) | Sanitize AI-rendered HTML | Medium | Should | Open ([#9](https://github.com/ggustin93/agentic-lab-analyzer/issues/9)) |
+| [013](013-test-coverage-gaps.md) | Close targeted test coverage gaps | Medium | Should | Open ([#10](https://github.com/ggustin93/agentic-lab-analyzer/issues/10)) |
+| [014](014-processing-task-lifecycle.md) | Processing task lifecycle | Medium | Could | Open ([#11](https://github.com/ggustin93/agentic-lab-analyzer/issues/11)) |
+| [015](015-ocr-quality-gate.md) | OCR quality gate with three-way routing | Medium | Could | Open ([#12](https://github.com/ggustin93/agentic-lab-analyzer/issues/12)) |
+| [016](016-repository-split.md) | Split DatabaseManager into repositories | Low | Could† | Open ([#13](https://github.com/ggustin93/agentic-lab-analyzer/issues/13)) |
+| [017](017-docling-local-ocr-adapter.md) | Local OCR adapter (Docling vs. PaddleOCR) | Low | Could | Open ([#14](https://github.com/ggustin93/agentic-lab-analyzer/issues/14)) |
 
 ## Prioritization method
 
