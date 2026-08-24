@@ -1,4 +1,4 @@
-# 004 — Row Level Security & private storage
+# 004: Row Level Security & private storage
 
 - Severity: Critical · Priority: Could (prerequisite to any deployment) ·
   Labels: security, database
@@ -26,7 +26,7 @@ server-side on demand.
 
 ## Edge cases
 
-The frontend PDF viewer consumes the URL directly — it must request a fresh
+The frontend PDF viewer consumes the URL directly; it must request a fresh
 signed URL rather than persist one; retry pipeline reads `public_url` from
 the database and must switch to signed access.
 

@@ -75,7 +75,7 @@ docker-compose run --rm cypress  # Run E2E tests in container
 - **Modular agent system**: Swappable agents for OCR (`MistralOCRService`) and analysis (`InsightAgent`)
 - **Chain of Responsibility Pattern**: Specialized agents with clean separation of concerns
 - **Asynchronous processing**: FastAPI handles concurrent document processing
-- **Dual persistence (ADR-008)**: `STORAGE_MODE=local` (default) — SQLite + local uploads; `supabase` — PostgreSQL with version-controlled migrations in `supabase/migrations/`
+- **Dual persistence (ADR-008)**: `STORAGE_MODE=local` (default): SQLite + local uploads; `supabase`: PostgreSQL with version-controlled migrations in `supabase/migrations/`
 - **Robust error handling**: JSON parsing, retry mechanisms, and comprehensive logging
 
 ### Key Data Flow
@@ -126,7 +126,7 @@ backend/
 
 - **Agent Contracts**: The pipeline is typed against the `Protocol`s in `agents/base.py` (`OCRAgent`, `ExtractionAgentProtocol`, `InsightAgentProtocol`) and receives its agents by constructor injection, so implementations are swappable and tests use plain fakes
 - **Composition Root**: `main.py` builds `DocumentProcessor` lazily behind `get_document_processor()` and injects it via FastAPI `Depends`; tests substitute it with `app.dependency_overrides` (ADR-007)
-- **Presenter**: API response shaping lives in `services/document_presenter.py` as pure functions — the persistence layer never formats output
+- **Presenter**: API response shaping lives in `services/document_presenter.py` as pure functions; the persistence layer never formats output
 - **Guaranteed guardrails**: the medical disclaimer is enforced server-side, and `test_date` must be ISO 8601 (ambiguous dates become null, never guessed)
 - **Service Layer**: Clear separation between API routes, business logic, and data access
 - **Error Resilience**: Comprehensive exception handling with user-friendly error messages
@@ -204,7 +204,7 @@ this.documentStore.setUploadLoading(true);
 ### Quality Assurance
 - **TypeScript Strict Mode**: Full type safety with no `any` types
 - **ESLint Configuration**: Enforced code quality and consistency
-- **No console noise**: `no-console` ESLint rule (warn/error only) — health data must never reach the browser console
+- **No console noise**: `no-console` ESLint rule (warn/error only); health data must never reach the browser console
 - **Docker Testing Environment**: Consistent testing across all environments
 
 ## File Structure Notes

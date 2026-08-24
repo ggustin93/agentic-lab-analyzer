@@ -1,4 +1,4 @@
-# ADR-002 — Hand-rolled agent pipeline over LangGraph/PydanticAI
+# ADR-002: Hand-rolled agent pipeline over LangGraph/PydanticAI
 
 - Status: Accepted (with explicit migration triggers)
 - Date: 2025-07 (recorded retroactively)
@@ -13,13 +13,13 @@ retries).
 
 ## Options considered
 
-1. **LangGraph** — checkpointing would eliminate the "stuck document" class
+1. **LangGraph**: checkpointing would eliminate the "stuck document" class
    of bugs (a crashed worker resumes from the last saved state) and replace
    the manual retry endpoint. Cost: a significant dependency and its
    abstractions for what is today a 3-node linear chain.
-2. **PydanticAI** — typed outputs with automatic retry-on-validation-error;
+2. **PydanticAI**: typed outputs with automatic retry-on-validation-error;
    would replace the hand-rolled JSON parsing. Same trade-off at lower cost.
-3. **Plain Python pipeline** — three explicit stages in
+3. **Plain Python pipeline**: three explicit stages in
    `services/processing_pipeline.py`, typed against the Protocols in
    `agents/base.py`.
 
@@ -30,7 +30,7 @@ few, and keeping the orchestration visible in ~200 lines is worth more
 (including as a portfolio artifact) than the framework features we are not
 yet using.
 
-## Consequences — and migration triggers
+## Consequences and migration triggers
 
 We knowingly accept: fire-and-forget `asyncio.create_task` (in-flight work is
 lost on restart, mitigated by the retry endpoint and stuck-document

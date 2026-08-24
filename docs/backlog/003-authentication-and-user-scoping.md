@@ -1,4 +1,4 @@
-# 003 — Authentication & per-user scoping
+# 003: Authentication & per-user scoping
 
 - Severity: Critical · Priority: Could (prerequisite to any deployment) ·
   Labels: security, backend, frontend
@@ -8,7 +8,7 @@
 No endpoint requires authentication; `GET /api/v1/documents` returns every
 document in the system. The schema has a `user_id` column that is never
 populated or filtered on. Acceptable only while the project runs locally
-with synthetic data — stated openly in README section 8.
+with synthetic data, stated openly in README section 8.
 
 ## Expected behavior
 
@@ -41,5 +41,5 @@ Roles/permissions beyond single-user ownership; organization sharing; MFA.
 ## Assumptions / open questions
 
 Whether the demo deployment keeps a public "sandbox" mode (auto-created
-anonymous session) or requires sign-in — a product decision to make before
+anonymous session) or requires sign-in: a product decision to make before
 implementation.

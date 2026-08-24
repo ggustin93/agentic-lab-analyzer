@@ -3,9 +3,9 @@
 This backlog documents the findings of a structured audit of this
 proof-of-concept (security, responsible-AI, architecture, and testing),
 triaged and prioritized deliberately. Each item follows the same
-specification template — expected behavior, business rules, edge cases,
+specification template: expected behavior, business rules, edge cases,
 constraints, validation intent (acceptance criteria), what is intentionally
-out of scope, and open questions — so that it can be converted into a GitHub
+out of scope, and open questions, so that it can be converted into a GitHub
 issue as-is. Open items are mirrored as GitHub issues (linked in the table);
 the files here remain the spec of record.
 
@@ -38,7 +38,7 @@ most of its value (see `001`–`004`).
 
 ## Prioritization method
 
-Priorities use MoSCoW informed by a RICE-lite score — Impact (1–5, on the
+Priorities use MoSCoW informed by a RICE-lite score: Impact (1–5, on the
 project's current goal: a credible, honest proof-of-concept) × Confidence ÷
 Effort in days. Scores are indicative, recorded so the ordering can be
 challenged rather than guessed at; they are re-derived when the goal changes
@@ -62,7 +62,7 @@ goal, where 003/004 become non-negotiable Musts).
 | 016 Repository split | 1 | 90 % | 1 d | 0.9 | Could† |
 | 017 Local OCR adapter (Docling / PaddleOCR) | 3 | 60 % | 2 d | 0.9 | Could |
 
-† Deferred with an explicit trigger (see the issue) — recorded so the deferral is a decision, not an omission.
+† Deferred with an explicit trigger (see the issue); recorded so the deferral is a decision, not an omission.
 
 \* Deliberately scheduled behind a documented mitigation: the project runs
 locally with synthetic data, and README section 8 states these limitations

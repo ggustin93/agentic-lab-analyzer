@@ -1,4 +1,4 @@
-# 005 — Rate limiting & processing locks
+# 005: Rate limiting & processing locks
 
 - Severity: High · Priority: Should · Labels: security, backend, cost
 
@@ -6,7 +6,7 @@
 
 Upload and retry endpoints trigger paid OCR/LLM calls without any
 throttling, and `retry` has no guard against concurrent re-processing of the
-same document. Until 003 lands, both are callable anonymously — a direct
+same document. Until 003 lands, both are callable anonymously: a direct
 cost-amplification vector.
 
 ## Expected behavior

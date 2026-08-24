@@ -1,4 +1,4 @@
-# 007 — Deterministic out-of-range flag
+# 007: Deterministic out-of-range flag
 
 - Severity: High · Priority: Should · Labels: responsible-ai, data-quality,
   backend
@@ -19,8 +19,8 @@ at most a hint, never the source of truth.
 
 ## Business rules
 
-- A parser handles the common range shapes (`a - b`, `< b`, `> a`, `≤`, `≥`)
-  — logic comparable to the frontend's `reference-range-parser.service.ts`,
+- A parser handles the common range shapes (`a - b`, `< b`, `> a`, `≤`, `≥`):
+  logic comparable to the frontend's `reference-range-parser.service.ts`,
   implemented and tested backend-side where the data is persisted.
 - Unparseable range or non-numeric value → status `indeterminate`, displayed
   as such; never a silent `false`/normal.
@@ -43,11 +43,11 @@ qualitative results ("negative", "positive"); multiple sub-ranges.
 
 ## Out of scope (deliberate)
 
-Age/sex-specific reference ranges from an authoritative source — a research
+Age/sex-specific reference ranges from an authoritative source: a research
 direction, see `docs/research-notes.md`.
 
 ## Assumptions / open questions
 
 Whether to unify the parser (shared spec, two implementations, one fixture
 set) or expose the backend's verdict to the frontend and delete the
-duplicate — leaning toward the latter.
+duplicate; leaning toward the latter.

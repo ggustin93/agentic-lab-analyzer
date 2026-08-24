@@ -1,13 +1,13 @@
-# 018 — Synthetic lab-report corpus generator
+# 018: Synthetic lab-report corpus generator
 
 - Severity: Medium · Priority: Should · Labels: responsible-ai, testing,
   data-quality
 
 ## Context
 
-Every measurement this project wants to make — prompt evaluation (011),
+Every measurement this project wants to make: prompt evaluation (011),
 quality-gate calibration (015), the local-OCR bake-off (017), noise
-robustness (research notes §4) — needs labeled documents, and real lab
+robustness (research notes §4); it needs labeled documents, and real lab
 reports are GDPR Article 9 data this project must not collect. Generation
 solves both problems at once: a *generated* document's expected extraction
 is known **by construction**, so ground truth is perfect, free, and
@@ -22,15 +22,15 @@ truth: native PDF, and a degraded scan/photo variant.
 ## Business rules
 
 - 2–3 fictitious laboratory templates (distinct column orders, ↗/↘
-  conventions, DD/MM dates, French units) — *inspired by* Belgian layouts,
+  conventions, DD/MM dates, French units), *inspired by* Belgian layouts,
   imitating no real brand, name, or logo.
 - Content sampled from the repository's own marker catalog
   (`src/app/data/lab-markers.data.ts` reference ranges), with in/out-of-
-  range proportions controlled per run — the expected `is_out_of_range`
+  range proportions controlled per run: the expected `is_out_of_range`
   flags fall out of the sampling.
 - Rendering: HTML/CSS → PDF (e.g. WeasyPrint); degraded variant via
   rasterization + parameterized noise (slight rotation, blur, JPEG
-  artifacts, contrast) — the noise level is an input, enabling degradation
+  artifacts, contrast), the noise level is an input, enabling degradation
   curves.
 - Patient identities via Faker, deliberately implausible; fixed seed and a
   generator version string embedded in each corpus manifest, so any clone
@@ -55,7 +55,7 @@ modality router (017).
   `expected.json` conforming to `HealthDataExtraction`, and a sanity test
   round-trips one clean native document through the extraction prompt.
 - Given the noise parameter, then the scan variant is produced from the
-  same truth file — one truth, two modalities.
+  same truth file: one truth, two modalities.
 
 ## Out of scope (deliberate)
 

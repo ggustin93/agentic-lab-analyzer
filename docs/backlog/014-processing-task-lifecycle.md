@@ -1,4 +1,4 @@
-# 014 — Processing task lifecycle
+# 014: Processing task lifecycle
 
 - Severity: Medium · Priority: Could · Labels: reliability, backend
 
@@ -6,7 +6,7 @@
 
 The pipeline is launched with a fire-and-forget `asyncio.create_task` whose
 reference is not retained: tasks are garbage-collectable mid-flight, and a
-process restart silently loses in-flight work — the "stuck document"
+process restart silently loses in-flight work: the "stuck document"
 symptom that the retry endpoint and the dashboard poll then compensate for.
 ADR-002 records why a full workflow engine is not (yet) the answer.
 
@@ -17,7 +17,7 @@ without user intervention.
 
 ## Business rules
 
-- Task references retained in a set (removal on completion) — the minimal
+- Task references retained in a set (removal on completion); the minimal
   correctness fix.
 - On startup, documents left in `processing` beyond a threshold are marked
   `error` with a "interrupted" message, making the failure explicit instead
@@ -28,11 +28,11 @@ without user intervention.
 - Given a pipeline task in flight, then a strong reference to it exists
   until completion (no GC-collectable task).
 - Given a process restart with a document mid-processing, then within one
-  startup pass the document is in a terminal, retryable state — not stuck.
+  startup pass the document is in a terminal, retryable state, not stuck.
 
 ## Out of scope (deliberate)
 
-A real queue or checkpointed workflow — explicitly deferred with migration
+A real queue or checkpointed workflow, explicitly deferred with migration
 triggers in ADR-002.
 
 ## Assumptions / open questions

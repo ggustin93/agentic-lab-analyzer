@@ -1,4 +1,4 @@
-# 002 — Bounded SSE streams
+# 002: Bounded SSE streams
 
 - Severity: High · Priority: Should · Labels: security, backend, reliability · Status: Done
 
@@ -6,7 +6,7 @@
 
 `GET /api/v1/documents/{id}/stream` (`main.py`) loops forever for an unknown
 `document_id`: no existence check, no lifetime bound, no disconnect
-detection — each such stream polls the database every 2 s indefinitely.
+detection; each such stream polls the database every 2 s indefinitely.
 
 ## Expected behavior
 

@@ -1,4 +1,4 @@
-# 008 — Native structured outputs
+# 008: Native structured outputs
 
 - Severity: Medium · Priority: Should · Labels: responsible-ai, backend
 
@@ -7,7 +7,7 @@
 Both agents use `response_format: {"type": "json_object"}` (which guarantees
 JSON, not *our* JSON), describe the schema in prose inside the prompt, and
 parse with a hand-rolled cleaner. The schema already exists as Pydantic
-models — it should be the contract sent to the API.
+models; it should be the contract sent to the API.
 
 ## Expected behavior
 
@@ -32,7 +32,7 @@ one retry carries the validation error back to the model.
 
 ## Out of scope (deliberate)
 
-Adopting PydanticAI or instructor wholesale — reconsidered under ADR-002's
+Adopting PydanticAI or instructor wholesale; reconsidered under ADR-002's
 migration triggers.
 
 ## Assumptions / open questions

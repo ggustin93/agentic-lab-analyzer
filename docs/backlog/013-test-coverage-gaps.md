@@ -1,4 +1,4 @@
-# 013 — Close targeted test coverage gaps
+# 013: Close targeted test coverage gaps
 
 - Severity: Medium · Priority: Should · Labels: testing
 

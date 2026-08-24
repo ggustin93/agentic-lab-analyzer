@@ -4,7 +4,7 @@ Every structural decision in this project is recorded here in a lightweight
 [MADR](https://adr.github.io/madr/) format: context, options considered,
 decision, and consequences (including the ones we accept knowingly).
 
-ADRs are immutable once accepted — a change of direction gets a new ADR that
+ADRs are immutable once accepted; a change of direction gets a new ADR that
 supersedes the old one, so the reasoning trail stays auditable.
 
 | # | Decision | Status |

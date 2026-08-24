@@ -23,5 +23,5 @@ SOFTWARE.
 ---
 
 **Note on intended use:** this project is an educational proof-of-concept. It
-is not a medical device and must not be used for clinical decisions — see
+is not a medical device and must not be used for clinical decisions: see
 README section 8.

@@ -26,13 +26,13 @@ npm run test:all:docker         # full containerized test run
 ```
 
 `make start` / `make clean` / `make monitor` wrap the cleanup and monitoring
-scripts in [`scripts/`](../scripts/) — see [`scripts/README.md`](../scripts/README.md).
+scripts in [`scripts/`](../scripts/); see [`scripts/README.md`](../scripts/README.md).
 
 ## Troubleshooting
 
-- **Frontend build fails on npm versions** — remove `node_modules` and
+- **Frontend build fails on npm versions**: remove `node_modules` and
   `package-lock.json`, then `docker compose build --no-cache frontend`.
-- **Backend health check fails** — `docker compose logs backend`, then verify
+- **Backend health check fails**: `docker compose logs backend`, then verify
   every variable in `backend/.env` is set (see README section 7.2).
-- **Stale cache issues** — `docker builder prune -f` and rebuild with
+- **Stale cache issues**: `docker builder prune -f` and rebuild with
   `--no-cache`.

@@ -1,4 +1,4 @@
-# 012 — Sanitize AI-rendered HTML
+# 012: Sanitize AI-rendered HTML
 
 - Severity: Medium · Priority: Should · Labels: security, frontend
 
@@ -37,5 +37,5 @@ CSP headers (belongs to deployment configuration).
 
 ## Assumptions / open questions
 
-Whether KaTeX output requires an extended allow-list — to verify against
+Whether KaTeX output requires an extended allow-list: to verify against
 DOMPurify defaults.

@@ -1,10 +1,10 @@
-# Research notes — open questions for AI-assisted lab report analysis
+# Research notes: open questions for AI-assisted lab report analysis
 
 These notes collect directions we consider promising for improving the AI
 core of this proof-of-concept, written from a research perspective rather
 than as a feature list. None of them are implemented; several may prove
 unnecessary at this scale. They are recorded because knowing *what one has
-not validated* is part of building responsibly with LLMs — this system has,
+not validated* is part of building responsibly with LLMs; this system has,
 at present, no measured claim to extraction accuracy, robustness, or
 calibration, and the notes below sketch how such claims could be earned.
 
@@ -17,8 +17,8 @@ Any improvement to prompts or models is currently unmeasurable (see backlog
   documents raise privacy questions this project should not take on; a
   *synthetic report generator* (templates parameterized by laboratory
   format, language, units, and injected OCR-like noise) offers controlled
-  difficulty and unlimited labeled data — with ground truth known by
-  construction — at the cost of realism: a limitation to state, not hide.
+  difficulty and unlimited labeled data (with ground truth known by
+  construction) at the cost of realism: a limitation to state, not hide.
   The generator is now specified as backlog 018; the dataset discipline
   (dev/held-out split by template, small local anonymized real set as the
   reality check) is part of backlog 011.
@@ -55,7 +55,7 @@ Any improvement to prompts or models is currently unmeasurable (see backlog
 
 The out-of-range flag (backlog 007) becomes deterministic given a parsed
 range; residual uncertainty then lives in the extraction itself. Measuring
-calibration (does the pipeline's confidence — however proxied — track its
+calibration (does the pipeline's confidence, however proxied, track its
 empirical accuracy?) would be a prerequisite before *any* confidence is
 shown to a user, since miscalibrated confidence on medical data is worse
 than none.
@@ -64,11 +64,11 @@ than none.
 
 - **OCR-noise sensitivity**: perturbation studies (character substitutions,
   table cell shifts, arrow/symbol corruption) would characterize how
-  extraction quality degrades — the current pipeline's behavior under
+  extraction quality degrades: the current pipeline's behavior under
   imperfect OCR is unknown.
 - **Prompt-injection resistance**: a small adversarial suite (documents
   containing instructions) with a measured attack success rate, before and
-  after mitigations such as delimiter framing — mitigations reduce, they do
+  after mitigations such as delimiter framing; mitigations reduce, they do
   not eliminate, and the honest output of this work is a number, not a
   claim of immunity.
 - **Format generalization**: the prompt encodes assumptions from a handful
@@ -81,19 +81,19 @@ The current design sends document content to third-party APIs (recorded
 deliberately in ADR-006). Two directions merit comparison on the same
 benchmark: PII/PHI redaction *before* the LLM stage (NER-based, with the
 irony acknowledged that redaction models also need evaluation), and local
-models trading accuracy for data locality — Docling (layout- and
+models trading accuracy for data locality: Docling (layout- and
 table-aware, markdown output matching our pipeline's existing contract; see
-backlog 017) and PaddleOCR's PP-StructureV3 as full-page candidates —
-SLANet_plus as a table-structure specialist — with a small instruction-tuned LLM for
-extraction. The comparison itself — a quality/privacy frontier on a synthetic
-corpus — would be the contribution; picking a point on it is a product
+backlog 017) and PaddleOCR's PP-StructureV3 as full-page candidates
+(SLANet_plus as a table-structure specialist) with a small instruction-tuned LLM for
+extraction. The comparison itself (a quality/privacy frontier on a synthetic
+corpus) would be the contribution; picking a point on it is a product
 decision.
 
 ## 6. Grounding against authoritative references
 
 Reference ranges are currently taken from the document itself. An
 age/sex-aware reference database would allow *discrepancy detection*
-(document range vs. expected range) — reframing the system from "trust the
+(document range vs. expected range), reframing the system from "trust the
 document" toward "cross-check the document", which is arguably the more
 interesting data-quality problem. Sourcing and licensing such a database
 correctly is the hard part and should not be improvised.
@@ -101,21 +101,21 @@ correctly is the hard part and should not be improvised.
 ## 7. Handling laboratory format diversity
 
 Belgian lab reports come from many providers (hospital LIS templates,
-private networks), and most of the variance sits in *layout semantics* —
-which column holds the current result, how historical values and abnormal
-markers are denoted, date conventions — rather than in character
+private networks), and most of the variance sits in *layout semantics*
+(which column holds the current result, how historical values and abnormal
+markers are denoted, date conventions) rather than in character
 recognition. Three approaches, in decreasing order of appeal for this
 project:
 
 - **Per-laboratory parsing profiles (favored)**: declarative, versioned
   configurations (column mappings, arrow conventions, date format) selected
   by fingerprinting the report header, feeding the extraction stage.
-  Auditable, testable with per-profile fixtures, and cheap to extend — the
+  Auditable, testable with per-profile fixtures, and cheap to extend: the
   proper generalization of the lab-specific rule this project once carried
   inside a prompt. A leave-one-laboratory-out evaluation (§4) measures how
   far the *default* profile carries without one.
 - **A different or "better" OCR model**: only justified if error analysis
-  on the evaluation corpus shows OCR itself — not extraction or parsing —
+  on the evaluation corpus shows OCR itself, not extraction or parsing,
   to be the bottleneck; switching providers without that measurement is
   guesswork.
 - **Per-laboratory fine-tuned OCR models (not pursued)**: N models mean N
@@ -135,7 +135,7 @@ Pinned model versions (a dated snapshot rather than `-latest` aliases),
 versioned prompts with provenance on every stored analysis (backlog 010),
 and fixture-based evaluations runnable by anyone cloning the repository.
 Without these, none of the experiments above would be comparable across
-time — reproducibility is the cheapest of the improvements listed here and
+time: reproducibility is the cheapest of the improvements listed here and
 the precondition for all the others.
 
 ---

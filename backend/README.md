@@ -1,4 +1,4 @@
-# Backend — FastAPI document analysis API
+# Backend: FastAPI document analysis API
 
 Python 3.11 / FastAPI service that turns uploaded lab documents into
 structured health markers and AI-generated insights. Architecture, security
@@ -7,11 +7,11 @@ and [`docs/adr/`](../docs/adr/).
 
 ## Pipeline
 
-1. `MistralOCRService` — PDF/image → per-page markdown (Mistral OCR API)
-2. `ExtractionAgent` — markdown → typed `HealthMarker`s (Mistral Large, Pydantic-validated)
-3. `InsightAgent` — validated markers → summary and recommendations (Chutes.AI)
+1. `MistralOCRService`: PDF/image → per-page markdown (Mistral OCR API)
+2. `ExtractionAgent`: markdown → typed `HealthMarker`s (Mistral Large, Pydantic-validated)
+3. `InsightAgent`: validated markers → summary and recommendations (Chutes.AI)
 4. Persistence behind the ports in `services/ports.py` (ADR-008), selected by `STORAGE_MODE`: local SQLite + folder (default) or Supabase
-5. SSE — processing stages streamed to the frontend
+5. SSE: processing stages streamed to the frontend
 
 Agents are injected against the `Protocol` contracts in `agents/base.py`,
 persistence adapters against `services/ports.py`; `main.py` is the
@@ -36,7 +36,7 @@ Interactive docs: `http://localhost:8000/docs`.
 ```bash
 cd backend
 pip install -r requirements.txt
-cp .env.example .env        # fill in the Mistral and Chutes.AI keys — that's all
+cp .env.example .env        # fill in the Mistral and Chutes.AI keys; that's all
 python main.py              # serves on localhost:8000
 ```
 
@@ -49,7 +49,7 @@ Or with Docker from the repo root: `docker compose up --build`
 ## Tests
 
 ```bash
-python -m pytest            # fully mocked — no API keys needed (tests/conftest.py)
+python -m pytest            # fully mocked; no API keys needed (tests/conftest.py)
 ```
 
 Covers the processor lifecycle and retries, upload validation and bounded SSE

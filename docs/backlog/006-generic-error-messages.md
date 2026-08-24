@@ -1,4 +1,4 @@
-# 006 — Generic client-facing error messages
+# 006: Generic client-facing error messages
 
 - Severity: Medium · Priority: Should · Labels: security, backend · Status: Done
 
@@ -17,14 +17,14 @@ trace) goes to server logs only, correlated by document id.
 ## Business rules
 
 - A small catalog of user-facing messages (upload failed, processing failed,
-  not found, retry later) — no interpolated exception text.
+  not found, retry later), with no interpolated exception text.
 - `error_message` stored in the database follows the same catalog.
 
 ## Validation intent (acceptance criteria)
 
 - Given a storage failure with an internal URL in the exception, when the
   client receives the response, then the body contains no URL, host, bucket
-  or table name — and the server log contains the full trace.
+  or table name, and the server log contains the full trace.
 
 ## Out of scope (deliberate)
 

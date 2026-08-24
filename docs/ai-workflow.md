@@ -2,7 +2,7 @@
 
 This project is built AI-first, deliberately: AI agents draft, a human decides.
 This document describes the actual workflow, its guardrails, and what stays
-human — because "we use AI" only means something if you can say *how* and
+human: because "we use AI" only means something if you can say *how* and
 *where its output gets challenged*.
 
 ## Where AI is used
@@ -17,7 +17,7 @@ human — because "we use AI" only means something if you can say *how* and
 
 Project context for AI assistants lives in `CLAUDE.md` (architecture map,
 commands, conventions). It is treated as documentation: when the code and
-`CLAUDE.md` disagree, the file gets fixed — a stale claim is worse than no
+`CLAUDE.md` disagree, the file gets fixed; a stale claim is worse than no
 claim.
 
 ## Guardrails
@@ -27,7 +27,7 @@ claim.
 - **Determinism over generation for safety-relevant logic.** The LLM extracts
   and summarizes; validation rules (dates must be ISO 8601 and are rejected
   rather than guessed, the medical disclaimer is enforced server-side) live
-  in reviewed, tested code — see `backend/services/json_utils.py` and
+  in reviewed, tested code: see `backend/services/json_utils.py` and
   `insight_agent.py`.
 - **No health data in AI development loops.** Real documents never serve as
   prompts or fixtures; test fixtures are synthetic
@@ -44,6 +44,6 @@ CI review), and their findings were then human-triaged: scored with
 RICE, mapped to a risk register, converted into acceptance criteria, and
 applied selectively. The audit found real bugs (an SSE connection that broke
 with two concurrent uploads, a JSON "cleaner" that could corrupt valid JSON,
-a US date-pivot that could silently swap day and month on Belgian reports) —
-and also produced findings that were rejected after verification. That
+a US date-pivot that could silently swap day and month on Belgian reports).
+It also produced findings that were rejected after verification. That
 accept/reject loop is the workflow this document describes.

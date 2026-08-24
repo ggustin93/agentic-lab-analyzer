@@ -1,4 +1,4 @@
-# 001 — Server-side upload validation
+# 001: Server-side upload validation
 
 - Severity: High · Priority: Should · Labels: security, backend · Status: Done
 
@@ -11,7 +11,7 @@ are a UX convenience, not a control.
 
 ## Expected behavior
 
-Every upload is validated server-side — size and content type — before any
+Every upload is validated server-side (size and content type) before any
 byte reaches storage or the database.
 
 ## Business rules
@@ -19,7 +19,7 @@ byte reaches storage or the database.
 - Maximum size: 10 MB (single source of truth in `config/settings.py`,
   read from the `MAX_FILE_SIZE` environment variable already present in
   `.env.example`).
-- Accepted types: PDF, PNG, JPEG — determined from magic bytes
+- Accepted types: PDF, PNG, JPEG, determined from magic bytes
   (`python-magic` is already a dependency), never from the filename.
 - Rejections are typed: `413` for size, `415` for type.
 
@@ -30,7 +30,7 @@ encrypted PDF; interrupted upload; content-type header absent or misleading.
 
 ## Constraints
 
-Health-data context: a rejected file must leave no trace — no storage
+Health-data context: a rejected file must leave no trace: no storage
 object, no database row, no content in logs.
 
 ## Validation intent (acceptance criteria)
