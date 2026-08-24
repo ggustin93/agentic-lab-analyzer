@@ -388,27 +388,4 @@ export class DocumentStore {
     });
   }
 
-  // ===========================================
-  // DEBUGGING UTILITIES
-  // ===========================================
-
-  /**
-   * Get State Snapshot
-   * 
-   * Returns a snapshot of the current state for debugging purposes.
-   * 
-   * @returns Current state snapshot
-   */
-  getStateSnapshot(): DocumentState {
-    return { ...this.state() };
-  }
-
-  /**
-   * Log State
-   * 
-   * Logs the current state to console for debugging.
-   */
-  logState(): void {
-    console.log('📊 Document Store State:', this.getStateSnapshot());
-  }
 }

@@ -1,6 +1,6 @@
 # .github/workflows/ci.yml
 
-name: CI - Frontend Validation
+name: CI
 
 # This workflow runs on every push or pull request to the main branch.
 on:
@@ -47,42 +47,30 @@ jobs:
         run: npm run build -- --configuration production
 
   # ===================================================================
-  # ==            BACKEND (PYTHON) CHECKS - (DISABLED)               ==
+  # ==                 BACKEND (PYTHON) CHECKS                       ==
   # ===================================================================
-  # This job is included to show the structure of a full-stack CI pipeline.
-  # It is intentionally commented out to focus this CI on frontend validation,
-  # which is the priority for this role.
-  
-  # backend-checks:
-  #   name: Backend (Python) Validation
-  #   runs-on: ubuntu-latest
+  # The suite runs fully against mocks: no secret is required
+  # (tests/conftest.py injects dummy configuration).
+  backend-checks:
+    name: Backend (Python) Validation
+    runs-on: ubuntu-latest
 
-  #   defaults:
-  #     run:
-  #       working-directory: ./backend
+    defaults:
+      run:
+        working-directory: ./backend
 
-  #   steps:
-  #     # Step 1: Check out code.
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-  #     # Step 2: Set up Python environment.
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #         cache: 'pip'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
 
-  #     # Step 3: Install backend dependencies.
-  #     - name: Install Backend Dependencies
-  #       run: pip install -r requirements.txt
+      - name: Install Backend Dependencies
+        run: pip install -r requirements.txt
 
-  #     # Step 4: Run backend tests. This would use GitHub Secrets
-  #     # for secure access to API keys.
-  #     - name: Test Backend
-  #       # env:
-  #       #   MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-  #       #   CHUTES_AI_API_KEY: ${{ secrets.CHUTES_AI_API_KEY }}
-  #       #   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  #       #   SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-  #       run: pytest
+      - name: Test Backend
+        run: pytest

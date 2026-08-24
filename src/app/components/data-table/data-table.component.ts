@@ -126,7 +126,6 @@ export class DataTableComponent {
    */
   readonly dataLength = computed(() => {
     const currentData = this.data();
-    console.log('Data table received:', currentData);
     return currentData.length;
   });
 

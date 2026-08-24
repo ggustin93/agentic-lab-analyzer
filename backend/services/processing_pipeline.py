@@ -9,6 +9,7 @@ import logging
 import asyncio
 from typing import Dict, Optional
 
+from agents.base import OCRAgent, ExtractionAgentProtocol, InsightAgentProtocol
 from models.health_models import HealthInsights
 from services.database_manager import DatabaseManager
 from services.mistral_ocr_service import MistralOCRService
@@ -16,6 +17,12 @@ from services.extraction_agent import ExtractionAgent
 from services.insight_agent import InsightAgent
 
 logger = logging.getLogger(__name__)
+
+
+# User-facing message stored in documents.error_message: the real exception
+# (with stack trace) goes to server logs only — raw exception text can leak
+# infrastructure details to the client (backlog 006).
+PROCESSING_ERROR_MESSAGE = "Processing failed. Please retry the analysis."
 
 
 # Processing stages constants
@@ -44,17 +51,31 @@ class ProcessingPipeline:
     with comprehensive progress tracking and error handling.
     """
     
-    def __init__(self, database_manager: DatabaseManager):
+    def __init__(
+        self,
+        database_manager: DatabaseManager,
+        ocr_agent: Optional[OCRAgent] = None,
+        extraction_agent: Optional[ExtractionAgentProtocol] = None,
+        insight_agent: Optional[InsightAgentProtocol] = None,
+    ):
         """
-        Initialize processing pipeline with required dependencies.
-        
-        Args:
-            database_manager: Database manager for persistence operations
+        Initialize processing pipeline with its dependencies.
+
+        Agents are injected against their Protocols (agents/base.py) so
+        implementations can be swapped — or faked in tests — without touching
+        the pipeline. The Mistral/Chutes implementations are the defaults.
         """
         self.db_manager = database_manager
-        self.ocr_agent = MistralOCRService()
-        self.extraction_agent = ExtractionAgent()
-        self.insight_agent = InsightAgent()
+        self.ocr_agent: OCRAgent = ocr_agent or MistralOCRService()
+        self.extraction_agent: ExtractionAgentProtocol = extraction_agent or ExtractionAgent()
+        self.insight_agent: InsightAgentProtocol = insight_agent or InsightAgent()
+
+    async def aclose(self) -> None:
+        """Close the agents' HTTP clients (called from the app lifespan)."""
+        for agent in (self.ocr_agent, self.extraction_agent, self.insight_agent):
+            close = getattr(agent, "close", None)
+            if close:
+                await close()
     
     async def process_document_async(self, document_id: str, file_url: str, filename: str) -> None:
         """
@@ -87,7 +108,7 @@ class ProcessingPipeline:
             
         except Exception as e:
             logger.error(f"❌ Processing pipeline failed for document {document_id}: {e}", exc_info=True)
-            self.db_manager.mark_document_error(document_id, str(e))
+            self.db_manager.mark_document_error(document_id, PROCESSING_ERROR_MESSAGE)
             raise
     
     async def _execute_ocr_stage(self, document_id: str, file_url: str) -> Dict:
@@ -107,7 +128,7 @@ class ProcessingPipeline:
         logger.info(f"📄 Stage 1/4: Starting OCR extraction for {document_id}")
         self.db_manager.update_processing_stage(document_id, ProcessingStage.OCR_EXTRACTION)
         
-        structured_ocr_data = self.ocr_agent.extract_structured_data(file_url)
+        structured_ocr_data = await self.ocr_agent.extract_structured_data(file_url)
         if not structured_ocr_data or not structured_ocr_data.get('pages'):
             raise ValueError("OCR process yielded no pages or data")
         
@@ -205,7 +226,7 @@ class ProcessingPipeline:
             
         except Exception as e:
             logger.error(f"Error saving document data for {document_id}: {e}", exc_info=True)
-            self.db_manager.mark_document_error(document_id, str(e))
+            self.db_manager.mark_document_error(document_id, PROCESSING_ERROR_MESSAGE)
             raise
     
     async def retry_processing(self, document_id: str) -> bool:
