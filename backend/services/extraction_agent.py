@@ -43,8 +43,13 @@ class ExtractionAgent:
         {
             "markers": [{"marker": "name", "value": "value", "unit": "unit", "reference_range": "range", "is_out_of_range": true/false}],
             "document_type": "type",
-            "test_date": "MM/DD/YYYY"
+            "test_date": "YYYY-MM-DD"
         }
+
+        **DATE RULE (CRITICAL):** `test_date` MUST be ISO 8601 (YYYY-MM-DD). Lab reports often
+        use day-first formats (DD/MM/YYYY in Belgium and most of Europe): resolve the order from
+        the document's language and context. If the day/month order cannot be determined without
+        ambiguity, return null for `test_date` — never guess.
 
         **CRITICAL EXTRACTION RULES:**
         1.  **Parse the Markdown:** Accurately parse the markdown tables in the `markdown` field of each page. The table structure is your primary source of truth for associating values with their correct columns.
@@ -55,7 +60,7 @@ class ExtractionAgent:
             - If there are multiple result columns without clear historical labels, **assume the leftmost result column is the most recent value.** You must ignore all other result columns.
             - Results might contain non-numeric characters like trend arrows (e.g., '↗ 205', '↘ 80'). You **MUST** strip these characters and any surrounding whitespace before extracting the numeric value. For '↗ 205', extract '205'.
         4.  **Out of Range Flag (`is_out_of_range`):**
-            - This is a CRITICAL rule. For reports from "CLINIQUES ST LUC", the presence of a `↗` or `↘` arrow next to a value **definitively means that value is out of the normal reference range.**
+            - This is a CRITICAL rule. Many laboratory formats mark abnormal values with trend arrows: the presence of a `↗` or `↘` arrow next to a value **definitively means that value is out of the normal reference range.**
             - When you see a `↗` or `↘` in the original OCR text for a value, you **MUST** set `is_out_of_range` to `true` for that marker.
             - If no arrow is present, you must compare the extracted numeric `value` against the `reference_range` to determine if it is out of range. Set `is_out_of_range` to `false` if it is within the normal range or if you cannot confidently determine its status.
         5.  **Extract Ranges Exactly:** Preserve the exact format of the reference range (e.g., "3.5 - 5.0", "< 2.0"). If a range is missing, return an empty string.

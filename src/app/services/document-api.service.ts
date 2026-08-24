@@ -3,17 +3,18 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { HealthDocument, UploadResponse, AnalysisResultResponse } from '../models/document.model';
+import { environment } from '../../environments/environment';
 
 /**
  * Service Configuration Constants
- * 
+ *
  * Centralized configuration for API endpoints and SSE settings.
  * Using const assertions for better TypeScript inference and immutability.
  */
 const API_CONFIG = {
-  /** Base URL for all backend API endpoints */
-  BASE_URL: 'http://localhost:8000/api/v1',
-  
+  /** Base URL for all backend API endpoints, environment-specific */
+  BASE_URL: environment.apiBaseUrl,
+
   /** SSE connection retry configuration */
   SSE: {
     RETRY_DELAY: 1000,
@@ -216,15 +217,8 @@ export class DocumentApiService {
                    error.message || 
                    'An unexpected error occurred while communicating with the server';
     
-    // Log detailed error information for debugging (removed in production)
-    console.error('🚨 API Error Details:', {
-      status: error.status,
-      statusText: error.statusText,
-      message: message,
-      url: error.url,
-      timestamp: new Date().toISOString()
-    });
-    
+    console.error('API error', error.status, error.url);
+
     // Return user-friendly error for UI handling
     return throwError(() => new Error(message));
   };

@@ -78,7 +78,8 @@ class MistralOCRService:
             response.raise_for_status()
 
             ocr_result = response.json()
-            logger.debug(f"Mistral OCR API full response: {ocr_result}")
+            # Never log the response body: it contains the document's medical content
+            logger.debug(f"Mistral OCR returned {len(ocr_result.get('pages', []))} page(s) for {filename}")
             
             if not ocr_result.get('pages'):
                  logger.warning(f"OCR for {filename} completed but no pages were extracted.")

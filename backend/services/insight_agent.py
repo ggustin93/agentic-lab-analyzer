@@ -7,6 +7,14 @@ from services.json_utils import safe_json_parse
 
 logger = logging.getLogger(__name__)
 
+# The medical disclaimer is a product guarantee, not a model output: it is
+# always set server-side so a model omission or rewording can never drop it.
+MEDICAL_DISCLAIMER = (
+    "This analysis is for educational purposes only. It is not a substitute for "
+    "professional medical advice. Always consult a qualified healthcare provider."
+)
+
+
 class InsightAgent:
     def __init__(self):
         self.client = httpx.AsyncClient(
@@ -61,6 +69,9 @@ class InsightAgent:
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
             insight_data = safe_json_parse(content)
+
+            # The disclaimer is enforced here regardless of what the model returned
+            insight_data["disclaimer"] = MEDICAL_DISCLAIMER
 
             # Combine the input data with the generated insights
             return HealthInsights(data=extracted_data, **insight_data)

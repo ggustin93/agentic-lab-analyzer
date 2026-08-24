@@ -15,8 +15,9 @@ This project is a full-stack application designed to analyze medical lab documen
 5. [Testing Strategy](#5-testing-strategy)
 6. [Development Scripts](#6-development-scripts)
 7. [Local Development](#7-local-development)
-8. [Roadmap](#8-roadmap)
-9. [License](#9-license)
+8. [Security, Privacy & Known Limitations](#8-security-privacy--known-limitations)
+9. [Roadmap](#9-roadmap)
+10. [License](#10-license)
 
 ## 1. Features
 
@@ -46,7 +47,7 @@ Here's a visual overview of the application's key features:
 
 ## 3. Architecture Overview
 
-The Lab Insight Engine implements a multi-tier architecture designed around event-driven processing, real-time communication, and specialized AI agents. The system orchestrates complex document analysis workflows through a chain of responsibility pattern, where each component has a distinct role in transforming raw medical documents into structured, actionable health insights.
+DocBot AI implements a multi-tier architecture designed around event-driven processing, real-time communication, and specialized AI agents. The system orchestrates complex document analysis workflows through a chain of responsibility pattern, where each component has a distinct role in transforming raw medical documents into structured, actionable health insights.
 
 **How the Architecture Works:**
 When a user uploads a medical document, the system initiates a multi-stage processing pipeline: **(1) OCR Extraction** - Mistral AI vision models extract raw text and identify structural elements, **(2) Data Extraction** - A specialized extraction agent processes the extracted text to identify lab markers, values, and reference ranges using Chutes.AI, **(3) AI Insights Generation** - A separate insight agent creates clinical analysis and recommendations using Chutes.AI with medical prompts, **(4) Data Persistence** - Structured health data is validated and stored in Supabase PostgreSQL with complete analysis results, and **(5) Real-time Updates** - Server-Sent Events stream progress updates to the Angular frontend every 2 seconds, enabling live status tracking with color-coded visual indicators for four processing stages: **OCR extraction**, **AI analysis**, **saving results**, and **completion**. The frontend maintains reactive state through Angular signals, ensuring the UI immediately reflects processing changes without polling. Each processing stage is independently testable and monitored through comprehensive logging, while the agent-based backend design allows for easy swapping of AI services or processing strategies without affecting the core application logic.
@@ -78,6 +79,8 @@ When a user uploads a medical document, the system initiates a multi-stage proce
                                └───────────────────────────┘
 ```
 
+Architecture decisions and their trade-offs are recorded as ADRs in [`docs/adr/`](docs/adr/); the AI-assisted development workflow behind this project is documented in [`docs/ai-workflow.md`](docs/ai-workflow.md).
+
 ### 3.2 Source Code Structure
 
 ```
@@ -102,7 +105,6 @@ src/
 │   │   ├── analysis/                  # Document analysis page
 │   │   └── dashboard/                 # Main dashboard page
 │   ├── services/
-│   │   ├── debug.service.ts           # Development debugging utilities
 │   │   ├── document-analysis.service.ts # Core business logic orchestration
 │   │   ├── document-api.service.ts    # HTTP client for backend communication
 │   │   ├── document.store.ts          # Signal-based state management
@@ -215,7 +217,7 @@ A comprehensive, multi-layered testing strategy ensures high confidence in the a
 - Signal-based state management tests validated
 - Component interaction and UI logic verified
 
-**✅ Backend Tests: 22 PASSED**  
+**✅ Backend Tests: 23 PASSED**  
 - Complete document lifecycle testing verified
 - Agent integration and processing pipeline validated
 - Database operations and error handling confirmed
@@ -237,7 +239,7 @@ A comprehensive, multi-layered testing strategy ensures high confidence in the a
 | **Frontend Unit Tests** | Validate individual units of code and UI components in isolation. | **Jasmine & Karma** | **Services (`DocumentAnalysisService`):** Testing the core business logic, including the entire document lifecycle (upload, SSE updates, deletion) using HttpClientTestingModule for mocking API calls. <br><br>**Components (`DataTableComponent`) :** Validating complex UI logic, such as the dynamic CSS class binding for highlighting out-of-range lab values, and testing signal-based inputs with proper clinical status determination. |
 | **End-to-End (E2E) Tests** | Validate critical user flows from the user's perspective across the entire frontend application. | **Cypress** | **Happy Path Testing:** Simulating the full user journey from file upload, observing real-time processing status on the dashboard, to navigating to the final analysis page. The backend is mocked using Cypress intercepts to provide consistent API responses, allowing the frontend to be tested in isolation. <br><br>**Edge Cases:** Empty state handling and error scenarios. |
 | **Docker Integration Tests** | Validate the complete system in a containerized environment. | **Docker Compose** | **Service Integration:** Testing the interaction between all services in a production-like environment including database migrations and service connectivity. |
-| **Continuous Integration** | Automate quality assurance and prevent regressions. | **GitHub Actions** | **Automated Pipeline:** On every push to `main`, runs linting (`ESLint`), all unit tests (frontend and backend), E2E tests, and production build validation (`ng build`) to catch Ahead-of-Time (AOT) compilation errors. |
+| **Continuous Integration** | Automate quality assurance and prevent regressions. | **GitHub Actions** | **Automated Pipeline:** On every push to `main`, runs frontend linting (`ESLint`), frontend and backend unit tests, and production build validation (`ng build`) to catch Ahead-of-Time (AOT) compilation errors. E2E tests run locally/in Docker and are not yet wired into CI. |
 
 ### 5.3 Critical Test Scenarios
 
@@ -248,10 +250,9 @@ A comprehensive, multi-layered testing strategy ensures high confidence in the a
 - ✅ **Edge Cases:** Boundary values and malformed ranges handled gracefully
 
 **DocumentAnalysisService Lifecycle:**
-- ✅ **Upload Flow:** Complete document upload with SSE connection establishment
-- ✅ **Real-time Updates:** Server-sent events properly processed and state updated
-- ✅ **Error Handling:** API failures and upload errors properly managed
-- ✅ **Cleanup:** Service cleanup and resource management verified
+- ✅ **Upload Flow:** Complete document upload flow with mocked HTTP layer
+- ✅ **Error Handling:** API failures and upload errors properly managed, with no state pollution
+- ⏳ **Real-time Updates:** SSE handling is not yet covered by automated tests (manual + E2E-mocked only)
 
 **Backend Processing Pipeline:**
 - ✅ **Document Processing:** End-to-end document processing workflow validated
@@ -333,7 +334,7 @@ Edit `backend/.env` and add your credentials:
 MISTRAL_API_KEY=your_mistral_api_key
 CHUTES_AI_API_KEY=your_chutes_ai_key
 SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_service_role_key
+SUPABASE_KEY=your_supabase_service_role_key  # trusted backend only — never expose this key client-side (bypasses RLS)
 SUPABASE_BUCKET_NAME=health-docs # or your chosen bucket name
 ```
 *Note: You will also need to set up the database schema using the files in `supabase/migrations`.*
@@ -355,25 +356,73 @@ The application will be accessible at the following endpoints:
 *   **Frontend UI**: `http://localhost:4200`
 *   **Backend API Docs**: `http://localhost:8000/docs` (Swagger UI)
 
-## 8. Roadmap
+## 8. Security, Privacy & Known Limitations
+
+This is a proof-of-concept and its security posture is stated openly rather
+than implied. The list below is the project's own threat-model summary — each
+item is a conscious scope decision with a planned remediation, not an
+oversight. Architecture decisions (and their accepted trade-offs) are
+recorded as ADRs in [`docs/adr/`](docs/adr/).
+
+### 8.1 Intended use
+
+DocBot AI is an **educational tool for exploring AI-assisted document
+analysis**. It is not a medical device, provides no diagnosis, and must not
+be used for clinical decisions — every AI output carries a server-enforced
+disclaimer. This bounded intended use is a product decision: it keeps the
+project outside medical-device (MDR) and high-risk AI qualification, and it
+is why the PoC must never process real patient data beyond the author's own
+test documents (`scripts/purge_demo_data.py` empties the demo environment).
+
+### 8.2 Known security limitations (deliberate PoC scope)
+
+| # | Limitation | Risk | Planned remediation |
+|---|------------|------|---------------------|
+| 1 | **No authentication** on API endpoints | Anyone reaching the API can list/read/delete all documents | Supabase Auth (JWT) + per-user scoping on every query |
+| 2 | **Public storage bucket** with permanent URLs | Documents readable by anyone with the link | Private bucket + short-lived signed URLs |
+| 3 | **No Row Level Security** in the database | Tables reachable via Supabase REST with the anon key | RLS policies per `user_id` on all tables and `storage.objects` (see ADR-005) |
+| 4 | **No server-side upload validation** | Oversized/arbitrary files accepted (client-side checks are bypassable) | Size + magic-bytes validation in the endpoint, before any storage |
+| 5 | **Unbounded SSE streams** | Streams for unknown IDs poll forever (resource exhaustion) | 404 on unknown IDs, bounded stream lifetime, disconnect detection |
+| 6 | **No rate limiting** | Anonymous uploads/retries trigger paid LLM calls | Rate limiting + per-document processing lock |
+
+These are acceptable **only** because the project runs locally with synthetic
+data. Items 1–3 are the prerequisite to any deployment. Each limitation is
+specified with acceptance criteria in [`docs/backlog/`](docs/backlog/), and
+open research questions about the AI core (evaluation methodology,
+robustness, calibration) are collected in
+[`docs/research-notes.md`](docs/research-notes.md).
+
+### 8.3 AI safety measures already in place
+
+- The medical **disclaimer is enforced server-side** — it never depends on
+  the model including it.
+- **Ambiguous dates are rejected, not guessed**: extraction requires ISO 8601
+  and non-conforming dates become `null` (a silently swapped day/month on a
+  Belgian lab report is a data-integrity error, not a formatting detail).
+- Document-derived text is treated as **untrusted input** end to end; AI
+  outputs are shape-validated with Pydantic before persistence.
+- The AI-assisted development process itself has guardrails, documented in
+  [`docs/ai-workflow.md`](docs/ai-workflow.md).
+
+## 9. Roadmap
 The following roadmap outlines areas for future exploration, focusing on applying advanced architectural patterns and strengthening the system's robustness and scalability.
 
-### 8.1 Architecture & Refactoring
+### 9.1 Architecture & Refactoring
 *   **Evolve to Hexagonal Architecture:** Formally refactor the backend by defining clear "Ports" (the application's core use cases) and "Adapters" (for external technologies like Supabase or Mistral). This would further decouple the core domain logic from infrastructure concerns.
 *   **Introduce Domain-Driven Design (DDD) Concepts:** Clarify the "Bounded Contexts" within the application (e.g., `DocumentIngestion` vs. `AnalysisInterpretation`). Define Aggregates (like a `Document` with its `AnalysisResult`) and Value Objects to create a more expressive and resilient domain model.
 
-### 8.2 Frontend Modernization & DX
+### 9.2 Frontend Modernization & DX
 *   **Full Signal Adoption:** Complete the migration from RxJS-based patterns to a fully signal-based architecture for state management and component communication, creating a more modern and unified codebase.
 *   **Enhanced Testing Framework:** Consider migrating from Karma/Jasmine to **Jest** for improved performance, better mocking capabilities, and enhanced developer experience.
 
-### 8.3 Backend & Scalability
+### 9.3 Backend & Scalability
 *   **Integrate Local, Privacy-Focused Agents:** Implement alternative agents using on-device models like **`docTR`** for OCR and **`Ollama`** for LLM analysis, offering users a fully offline and private processing option.
 *   **Decouple with Message Queue:** Replace direct `DocumentProcessor` calls with a message queue (e.g., RabbitMQ, Redis Streams) for improved fault tolerance and scalability.
 *   **Implement Caching Layer:** Add Redis-based caching for external AI service calls to reduce latency and costs.
 
-### 8.4 Security & Observability
+### 9.4 Security & Observability
 *   **Implement Authentication:** Integrate full authentication system (e.g., Supabase Auth) with Row-Level Security (RLS) for data privacy.
 *   **Enhanced Monitoring:** Implement structured logging and observability platform integration (e.g., Prometheus/Grafana) for performance tracking and system health monitoring.
 
-## 9. License
+## 10. License
 This project is for personal, non-commercial use only. Please see the [LICENSE.md](LICENSE.md) file for more details.

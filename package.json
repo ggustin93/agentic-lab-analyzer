@@ -1,5 +1,5 @@
 {
-  "name": "health-document-analyzer",
+  "name": "docbot-ai",
   "private": true,
   "scripts": {
     "ng": "ng",
