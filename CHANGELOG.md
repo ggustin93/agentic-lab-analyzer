@@ -8,6 +8,7 @@ Notable changes, grouped by phase. Dates reflect the actual commit history.
 - Supabase kept as the optional second adapter; its credentials are validated only when selected.
 - Contract tests for the local adapters against a real SQLite file and directory; `DocumentProcessor` now takes its adapters by constructor injection.
 - Backend Docker image fixed for current Debian slim (`libgl1`, `libxrender1`).
+- Insight model switched to `Qwen/Qwen3.8-27B-TEE` — the previously pinned Chutes model was retired from the catalog.
 
 ## 2026-08 — Hardening pass
 

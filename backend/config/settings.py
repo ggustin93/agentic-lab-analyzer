@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # bytes
 
     CHUTES_AI_ENDPOINT: str = "https://llm.chutes.ai/v1"
-    CHUTES_AI_MODEL: str = "chutesai/Mistral-Small-3.2-24B-Instruct-2506"
+    CHUTES_AI_MODEL: str = "Qwen/Qwen3.8-27B-TEE"
     MISTRAL_OCR_MODEL: str = "mistral-ocr-latest"
 
     model_config = SettingsConfigDict(env_file=".env", extra='ignore')
