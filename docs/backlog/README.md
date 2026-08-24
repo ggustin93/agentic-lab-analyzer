@@ -32,6 +32,32 @@ most of its value (see `001`–`004`).
 | [014](014-processing-task-lifecycle.md) | Processing task lifecycle | Medium | Could | Open |
 | [015](015-ocr-quality-gate.md) | OCR quality gate with three-way routing | Medium | Could | Open |
 | [016](016-repository-split.md) | Split DatabaseManager into repositories | Low | Could† | Open |
+| [017](017-docling-local-ocr-adapter.md) | Docling-based local OCR adapter | Low | Could | Open |
+
+## Prioritization method
+
+Priorities use MoSCoW informed by a RICE-lite score — Impact (1–5, on the
+project's current goal: a credible, honest proof-of-concept) × Confidence ÷
+Effort in days. Scores are indicative, recorded so the ordering can be
+challenged rather than guessed at; they are re-derived when the goal changes
+(the same items would rank differently against a "deploy to production"
+goal, where 003/004 become non-negotiable Musts).
+
+| Open item | Impact | Confidence | Effort | Score | MoSCoW |
+|---|---|---|---|---|---|
+| 007 Deterministic out-of-range flag | 5 | 80 % | 1.5 d | 2.7 | Should |
+| 012 Sanitize AI-rendered HTML | 4 | 90 % | 0.5 d | 7.2 | Should |
+| 013 Targeted test coverage gaps | 4 | 80 % | 1.5 d | 2.1 | Should |
+| 010 Analysis provenance | 3 | 80 % | 1 d | 2.4 | Should |
+| 008 Native structured outputs | 3 | 80 % | 1 d | 2.4 | Should |
+| 005 Rate limiting | 3 | 90 % | 0.5 d | 5.4 | Should |
+| 011 Prompt evaluation harness | 4 | 70 % | 2 d | 1.4 | Could |
+| 015 OCR quality gate | 3 | 60 % | 3 d | 0.6 | Could |
+| 003 Authentication & scoping | 4 | 70 % | 3 d | 0.9 | Could* |
+| 004 RLS & private storage | 4 | 70 % | 2 d | 1.4 | Could* |
+| 014 Processing task lifecycle | 2 | 90 % | 0.5 d | 3.6 | Could |
+| 016 Repository split | 1 | 90 % | 1 d | 0.9 | Could† |
+| 017 Docling local OCR adapter | 3 | 60 % | 2 d | 0.9 | Could |
 
 † Deferred with an explicit trigger (see the issue) — recorded so the deferral is a decision, not an omission.
 

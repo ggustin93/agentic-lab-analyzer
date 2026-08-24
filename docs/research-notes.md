@@ -78,8 +78,10 @@ The current design sends document content to third-party APIs (recorded
 deliberately in ADR-006). Two directions merit comparison on the same
 benchmark: PII/PHI redaction *before* the LLM stage (NER-based, with the
 irony acknowledged that redaction models also need evaluation), and local
-models (docTR + a small instruction-tuned LLM) trading accuracy for data
-locality. The comparison itself — a quality/privacy frontier on a synthetic
+models trading accuracy for data locality — Docling (layout- and
+table-aware, markdown output matching our pipeline's existing contract; see
+backlog 017) for document parsing, with a small instruction-tuned LLM for
+extraction. The comparison itself — a quality/privacy frontier on a synthetic
 corpus — would be the contribution; picking a point on it is a product
 decision.
 
