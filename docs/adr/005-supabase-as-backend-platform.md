@@ -1,6 +1,6 @@
 # ADR-005 — Supabase (BaaS) over self-managed Postgres + object storage
 
-- Status: Accepted
+- Status: Accepted — no longer the default; local mode is (see [ADR-008](008-local-first-persistence.md))
 - Date: 2025-07 (recorded retroactively)
 
 ## Context

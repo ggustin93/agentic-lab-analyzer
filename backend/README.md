@@ -10,11 +10,12 @@ and [`docs/adr/`](../docs/adr/).
 1. `MistralOCRService` — PDF/image → per-page markdown (Mistral OCR API)
 2. `ExtractionAgent` — markdown → typed `HealthMarker`s (Mistral Large, Pydantic-validated)
 3. `InsightAgent` — validated markers → summary and recommendations (Chutes.AI)
-4. `DatabaseManager` / `StorageManager` — persistence in Supabase (PostgreSQL + storage)
+4. Persistence behind the ports in `services/ports.py` (ADR-008), selected by `STORAGE_MODE`: local SQLite + folder (default) or Supabase
 5. SSE — processing stages streamed to the frontend
 
-Agents are injected against the `Protocol` contracts in `agents/base.py`;
-`main.py` is the composition root (ADR-007). Response shaping lives in
+Agents are injected against the `Protocol` contracts in `agents/base.py`,
+persistence adapters against `services/ports.py`; `main.py` is the
+composition root (ADR-007/008). Response shaping lives in
 `services/document_presenter.py`.
 
 ## API (prefix `/api/v1`)
@@ -35,9 +36,12 @@ Interactive docs: `http://localhost:8000/docs`.
 ```bash
 cd backend
 pip install -r requirements.txt
-cp .env.example .env        # fill in Mistral, Chutes.AI, Supabase credentials
+cp .env.example .env        # fill in the Mistral and Chutes.AI keys — that's all
 python main.py              # serves on localhost:8000
 ```
+
+Local mode (default) stores data in `data/app.db` and files in `uploads/`.
+Set `STORAGE_MODE=supabase` plus the Supabase variables for cloud persistence.
 
 Or with Docker from the repo root: `docker compose up --build`
 (see [`docs/docker.md`](../docs/docker.md)).

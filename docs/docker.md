@@ -3,9 +3,12 @@
 ## Quick start
 
 ```bash
-cp backend/.env.example backend/.env   # then fill in your API keys
+cp backend/.env.example backend/.env   # then fill in the two AI keys (local mode needs nothing else)
 docker compose up --build
 ```
+
+Local-mode data persists on the host via the `./backend` bind mount
+(`backend/data/`, `backend/uploads/`).
 
 | Service | URL |
 |---|---|

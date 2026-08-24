@@ -16,3 +16,4 @@ supersedes the old one, so the reasoning trail stays auditable.
 | [005](005-supabase-as-backend-platform.md) | Supabase (BaaS) over self-managed Postgres | Accepted |
 | [006](006-cloud-ocr-over-local.md) | Cloud OCR (Mistral) over local OCR | Accepted |
 | [007](007-hexagonal-lite.md) | Hexagonal-lite: ports for volatile dependencies only | Accepted |
+| [008](008-local-first-persistence.md) | Local-first persistence: SQLite + local files behind ports | Accepted |

@@ -65,25 +65,42 @@ flowchart LR
         UI["Signal store · three-layer services<br/>dashboard · PDF viewer"]
     end
     subgraph Backend["FastAPI Backend"]
-        DP["DocumentProcessor<br/>ProcessingPipeline · Presenter"]
-        subgraph Agents["Agents — swappable (ADR-007)"]
-            OCR["MistralOCRService<br/>page → markdown"]
-            EXT["ExtractionAgent<br/>markdown → markers"]
-            INS["InsightAgent<br/>markers → insights"]
+        DP["DocumentProcessor<br/>orchestrator"]
+        SM["StorageManager"]
+        DM["DatabaseManager<br/>+ Presenter"]
+        subgraph PP["ProcessingPipeline — agents injected via Protocols (ADR-007)"]
+            OCR["MistralOCRService<br/>page → markdown"] --> EXT["ExtractionAgent<br/>markdown → validated markers"] --> INS["InsightAgent<br/>markers → insights"]
         end
     end
-    subgraph Supabase["Supabase Platform"]
-        DB["PostgreSQL<br/>markers · metadata"]
-        ST["File storage"]
+    subgraph Persistence["Persistence — STORAGE_MODE (ADR-008)"]
+        DB["SQLite + local files<br/>(default)"]
+        ST["Supabase<br/>(optional)"]
     end
     UI -- "HTTP upload" --> DP
-    DP -- "SSE status stream" --> UI
-    DP --> OCR --> EXT --> INS
-    OCR -.-> M1["Mistral OCR API"]
-    EXT -.-> M2["Mistral Large"]
+    DP -- "SSE · 4-stage status" --> UI
+    DP --> SM
+    DP --> DM
+    DP --> PP
+    PP -- "markers · insights" --> DM
+    SM --> DB
+    DM --> DB
+    SM -.-> ST
+    DM -.-> ST
+    OCR -.-> M1["Mistral OCR API<br/>mistral-ocr-latest"]
+    EXT -.-> M2["Mistral chat API<br/>mistral-large-latest"]
     INS -.-> M3["Chutes.AI LLM"]
-    DP --> DB
-    DP --> ST
+
+    classDef frontend fill:#fecaca,stroke:#b91c1c,color:#7f1d1d
+    classDef backend fill:#99f6e4,stroke:#0f766e,color:#134e4a
+    classDef agents fill:#e9d5ff,stroke:#7e22ce,color:#581c87
+    classDef external fill:#fde68a,stroke:#b45309,color:#78350f
+    classDef data fill:#bbf7d0,stroke:#15803d,color:#14532d
+
+    class UI frontend
+    class DP,SM,DM backend
+    class OCR,EXT,INS agents
+    class M1,M2,M3 external
+    class DB,ST data
 ```
 
 Architecture decisions and their trade-offs are recorded as ADRs in [`docs/adr/`](docs/adr/); the AI-assisted development workflow behind this project is documented in [`docs/ai-workflow.md`](docs/ai-workflow.md).
@@ -125,8 +142,11 @@ The Python backend uses FastAPI for its asynchronous capabilities and implements
 
 Agents are injected against the Protocol contracts in `agents/base.py`, so implementations are swappable and tests use plain fakes ([ADR-007](docs/adr/007-hexagonal-lite.md)).
 
-### 3.5 Data & Persistence (Supabase)
-Supabase provides PostgreSQL and file storage; schema changes are version-controlled SQL migrations (each with a rollback) in `supabase/migrations/` — trade-offs recorded in [ADR-005](docs/adr/005-supabase-as-backend-platform.md).
+### 3.5 Data & Persistence (local by default, Supabase optional)
+Persistence sits behind two `Protocol` ports (`backend/services/ports.py`), selected by `STORAGE_MODE` ([ADR-008](docs/adr/008-local-first-persistence.md)):
+
+* **`local` (default)** — SQLite + a local uploads folder served over HTTP. No cloud account needed; clone, add two AI keys, run.
+* **`supabase`** — PostgreSQL and file storage, with version-controlled SQL migrations (each with a rollback) in `supabase/migrations/` — trade-offs in [ADR-005](docs/adr/005-supabase-as-backend-platform.md).
 
 ## 4. Tech Stack
 
@@ -186,24 +206,34 @@ Follow these steps to run the application on your local machine.
 
 ### 7.1 Prerequisites
 *   Docker & Docker Compose
-*   A Supabase account
 *   API keys for **Mistral AI** and **Chutes.AI**
+
+That's all: persistence defaults to local SQLite + a local uploads folder ([ADR-008](docs/adr/008-local-first-persistence.md)) — no database account needed.
 
 ### 7.2 Configure Environment
 Create a `.env` file in the `backend/` directory by copying the example file:
 ```bash
 cp backend/.env.example backend/.env
 ```
-Edit `backend/.env` and add your credentials:
+Edit `backend/.env` and add your two keys:
 ```ini
 # backend/.env
 MISTRAL_API_KEY=your_mistral_api_key
 CHUTES_AI_API_KEY=your_chutes_ai_key
+```
+Local data lands in `backend/data/` (SQLite) and `backend/uploads/` (files), both gitignored.
+
+<details>
+<summary>Optional: Supabase mode</summary>
+
+```ini
+STORAGE_MODE=supabase
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_KEY=your_supabase_service_role_key  # trusted backend only — never expose this key client-side (bypasses RLS)
-SUPABASE_BUCKET_NAME=health-docs # or your chosen bucket name
+SUPABASE_BUCKET_NAME=health-docs
 ```
-*Note: You will also need to set up the database schema using the files in `supabase/migrations`.*
+Set up the database schema with the files in `supabase/migrations/`.
+</details>
 
 ### 7.3 Launch
 With Docker running, start the services using Docker Compose:

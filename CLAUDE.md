@@ -75,11 +75,11 @@ docker-compose run --rm cypress  # Run E2E tests in container
 - **Modular agent system**: Swappable agents for OCR (`MistralOCRService`) and analysis (`InsightAgent`)
 - **Chain of Responsibility Pattern**: Specialized agents with clean separation of concerns
 - **Asynchronous processing**: FastAPI handles concurrent document processing
-- **Database migrations**: Supabase PostgreSQL with version-controlled migrations in `supabase/migrations/`
+- **Dual persistence (ADR-008)**: `STORAGE_MODE=local` (default) — SQLite + local uploads; `supabase` — PostgreSQL with version-controlled migrations in `supabase/migrations/`
 - **Robust error handling**: JSON parsing, retry mechanisms, and comprehensive logging
 
 ### Key Data Flow
-1. Document upload → `DocumentProcessor.process_document()` → Storage in Supabase
+1. Document upload → `DocumentProcessor.process_document()` → storage via the `FileStorage` port (local folder or Supabase)
 2. Async agent pipeline: OCR extraction → AI analysis → Structured data persistence  
 3. SSE streaming of status updates via `/api/v1/documents/{id}/stream`
 4. Frontend consumes SSE for real-time UI updates via `DocumentAnalysisService` (one `EventSource` per in-flight document)
@@ -97,11 +97,14 @@ backend/
 │   ├── document_models.py          # Pydantic models for document-related data structures
 │   └── health_models.py            # Medical domain models (HealthMarker, reference ranges)
 ├── services/
-│   ├── database_manager.py         # Supabase database operations and connection management
+│   ├── database_manager.py         # Supabase adapter for the DocumentRepository port
 │   ├── document_processor.py       # Core orchestration logic for document processing pipeline
 │   ├── extraction_agent.py         # OCR text extraction using Mistral AI vision models
 │   ├── insight_agent.py            # Clinical analysis and insights generation with AI
 │   ├── document_presenter.py       # Pure response-shaping functions (persistence never formats API output)
+│   ├── ports.py                    # DocumentRepository / FileStorage Protocols (ADR-008)
+│   ├── local_database_manager.py   # SQLite adapter (local mode, default) + schema.sql
+│   ├── local_storage_manager.py    # Local-folder file storage served via /api/v1/files
 │   ├── json_utils.py               # Safe JSON parsing and strict ISO 8601 date validation
 │   ├── mistral_ocr_service.py      # Mistral AI integration for optical character recognition
 │   ├── processing_pipeline.py      # Multi-stage document processing workflow management
@@ -172,7 +175,7 @@ this.documentStore.setUploadLoading(true);
 ## Environment Configuration
 
 - Frontend: Environment-specific configs in `src/environments/`
-- Backend: `.env` file in `backend/` directory with API keys for Mistral AI, Chutes.AI, and Supabase credentials
+- Backend: `.env` file in `backend/` with Mistral AI + Chutes.AI keys. `STORAGE_MODE=local` (default) uses SQLite + local uploads (ADR-008); `STORAGE_MODE=supabase` additionally requires the Supabase credentials
 
 ## Testing Strategy
 

@@ -43,4 +43,5 @@ tests substitute it with `app.dependency_overrides` instead of patching.
   into per-aggregate repositories (trigger: a second consumer of a subset
   of its interface — see backlog 016), and full ports for persistence and
   storage (trigger: a concrete need to swap them, e.g. the local-first
-  variant sketched in ADR-006).
+  variant sketched in ADR-006). *Update 2026-08: the second trigger fired —
+  persistence/storage ports were introduced in [ADR-008](008-local-first-persistence.md).*

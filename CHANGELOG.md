@@ -2,6 +2,13 @@
 
 Notable changes, grouped by phase. Dates reflect the actual commit history.
 
+## 2026-08 — Local-first persistence (ADR-008)
+
+- `STORAGE_MODE=local` (new default): SQLite + local uploads folder behind new `DocumentRepository` / `FileStorage` ports — the repo now runs with only two AI keys, no cloud database account.
+- Supabase kept as the optional second adapter; its credentials are validated only when selected.
+- Contract tests for the local adapters against a real SQLite file and directory; `DocumentProcessor` now takes its adapters by constructor injection.
+- Backend Docker image fixed for current Debian slim (`libgl1`, `libxrender1`).
+
 ## 2026-08 — Hardening pass
 
 - Security: server-side upload validation (size bound, magic-bytes content type), bounded SSE streams, generic client-facing error messages, async OCR client.
