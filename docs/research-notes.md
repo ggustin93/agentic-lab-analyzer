@@ -92,7 +92,38 @@ document" toward "cross-check the document", which is arguably the more
 interesting data-quality problem. Sourcing and licensing such a database
 correctly is the hard part and should not be improvised.
 
-## 7. Reproducibility hygiene
+## 7. Handling laboratory format diversity
+
+Belgian lab reports come from many providers (hospital LIS templates,
+private networks), and most of the variance sits in *layout semantics* —
+which column holds the current result, how historical values and abnormal
+markers are denoted, date conventions — rather than in character
+recognition. Three approaches, in decreasing order of appeal for this
+project:
+
+- **Per-laboratory parsing profiles (favored)**: declarative, versioned
+  configurations (column mappings, arrow conventions, date format) selected
+  by fingerprinting the report header, feeding the extraction stage.
+  Auditable, testable with per-profile fixtures, and cheap to extend — the
+  proper generalization of the lab-specific rule this project once carried
+  inside a prompt. A leave-one-laboratory-out evaluation (§4) measures how
+  far the *default* profile carries without one.
+- **A different or "better" OCR model**: only justified if error analysis
+  on the evaluation corpus shows OCR itself — not extraction or parsing —
+  to be the bottleneck; switching providers without that measurement is
+  guesswork.
+- **Per-laboratory fine-tuned OCR models (not pursued)**: N models mean N
+  training corpora of real health documents (a GDPR Article 9 acquisition
+  problem before being an ML problem), N evaluations, and re-training on
+  every template change. The maintenance and data-governance costs are out
+  of proportion at any scale this project can honestly claim.
+
+The operational counterpart of this section is the quality gate specified
+in backlog 015: whatever the OCR and profiles achieve, the system should
+measure per-document quality and route low-confidence documents to human
+review or explicit rejection rather than degrade silently.
+
+## 8. Reproducibility hygiene
 
 Pinned model versions (a dated snapshot rather than `-latest` aliases),
 versioned prompts with provenance on every stored analysis (backlog 010),
