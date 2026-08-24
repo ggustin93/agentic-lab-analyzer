@@ -34,7 +34,10 @@ This project is a full-stack application designed to analyze medical lab documen
 
 ## 2. Preview
 
-A visual overview of the application's key features. All screenshots show synthetic lab data: no real documents are ever processed.
+A visual overview of the application's key features. All captures show synthetic lab data: no real documents are ever processed.
+
+![Demo: upload, real-time pipeline, extracted markers, AI insights](assets/demo.gif)
+*End-to-end run: a synthetic lab report is uploaded, processed through the 4-stage pipeline, and reviewed (extracted markers, then AI insights).*
 
 ### 2.1 Document Upload & Dashboard
 ![Dashboard and Upload Interface](assets/screenshot-1.png)
