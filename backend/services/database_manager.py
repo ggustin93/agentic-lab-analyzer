@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 from supabase import Client
 
 from models.health_models import HealthInsights
+from services.document_presenter import format_insights_as_markdown, format_document_for_frontend
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +167,7 @@ class DatabaseManager:
             "document_id": document_id,
             "raw_text": raw_text,
             "structured_data": analysis_data,
-            "insights": self._format_insights_as_markdown(HealthInsights(**analysis_data))
+            "insights": format_insights_as_markdown(HealthInsights(**analysis_data))
         }
         
         analysis_result = self.supabase.table("analysis_results").upsert(
@@ -265,7 +266,7 @@ class DatabaseManager:
                 "*, analysis_results(structured_data, insights)"
             ).order("upload_date", desc=True).execute()
             
-            return [self._format_document_for_frontend(doc) for doc in result.data]
+            return [format_document_for_frontend(doc) for doc in result.data]
         except Exception as e:
             logger.error(f"Error listing documents: {e}", exc_info=True)
             raise
@@ -289,71 +290,7 @@ class DatabaseManager:
             if not result.data:
                 return None
             
-            return self._format_document_for_frontend(result.data)
+            return format_document_for_frontend(result.data)
         except Exception as e:
             logger.error(f"Error getting analysis for {document_id}: {e}", exc_info=True)
             return None
-    
-    def _format_insights_as_markdown(self, insights: HealthInsights) -> str:
-        """
-        Convert structured insights to markdown format for frontend display.
-        
-        Args:
-            insights: Structured health insights
-            
-        Returns:
-            str: Formatted markdown string
-        """
-        md = f"# Analysis Report\n\n## Summary\n{insights.summary}\n\n"
-        md += "## Key Findings\n" + "".join([f"- {finding}\n" for finding in insights.key_findings])
-        md += "\n## Recommendations\n" + "".join([f"- {rec}\n" for rec in insights.recommendations])
-        md += f"\n---\n\n**Disclaimer:** {insights.disclaimer}"
-        return md
-    
-    def _format_document_for_frontend(self, doc: Dict) -> Dict:
-        """
-        Format document data for frontend consumption.
-        
-        Args:
-            doc: Raw document data from database
-            
-        Returns:
-            Dict: Formatted document data
-        """
-        analysis_results = doc.get("analysis_results")
-        analysis = None
-        
-        # Handle both list (one-to-many) and dict (one-to-one) from Supabase join
-        if isinstance(analysis_results, list) and len(analysis_results) > 0:
-            analysis = analysis_results[0]
-        elif isinstance(analysis_results, dict):
-            analysis = analysis_results
-
-        extracted_data = []
-        ai_insights = None
-        
-        if analysis:
-            structured_data = analysis.get("structured_data")
-            ai_insights = analysis.get("insights")
-            
-            # Safely extract markers for the frontend
-            if isinstance(structured_data, dict) and "data" in structured_data:
-                # Ensure we handle potential missing 'markers' key gracefully
-                if isinstance(structured_data["data"], dict):
-                    extracted_data = structured_data["data"].get("markers", [])
-        
-        return {
-            "id": doc.get("id"),
-            "document_id": doc.get("id"),
-            "filename": doc.get("filename"),
-            "uploaded_at": doc.get("upload_date"),
-            "status": doc.get("status"),
-            "processed_at": doc.get("processed_at"),
-            "public_url": doc.get("public_url"),
-            "raw_text": doc.get("raw_text"),
-            "extracted_data": extracted_data,
-            "ai_insights": ai_insights,
-            "error_message": doc.get("error_message"),
-            "progress": doc.get("progress"),
-            "processing_stage": doc.get("processing_stage")
-        }
