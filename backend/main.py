@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, Request, UploadFile, HTTPException, APIRouter
+from fastapi import FastAPI, Depends, File, Request, UploadFile, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import uvicorn
@@ -7,6 +7,7 @@ import json
 import asyncio
 import magic
 from contextlib import asynccontextmanager
+from functools import lru_cache
 
 from services.document_processor import DocumentProcessor
 from config.settings import settings
@@ -15,8 +16,15 @@ from config.settings import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize services
-document_processor = DocumentProcessor()
+
+@lru_cache
+def get_document_processor() -> DocumentProcessor:
+    """
+    Composition root: the processor (and its Supabase client and agents) is
+    built lazily on first use and injected into endpoints via Depends, so
+    tests substitute it with dependency_overrides instead of patching.
+    """
+    return DocumentProcessor()
 
 # Content types accepted for upload, verified from magic bytes — never from
 # the filename or the client-declared content type (backlog 001)
@@ -42,7 +50,7 @@ GENERIC_ERROR_MESSAGES = {
 async def lifespan(app: FastAPI):
     logger.info("Starting Health Document Analyzer API v4")
     yield
-    await document_processor.processing_pipeline.aclose()
+    await get_document_processor().processing_pipeline.aclose()
     logger.info("Shutting down Health Document Analyzer API")
 
 app = FastAPI(
@@ -101,11 +109,14 @@ async def _read_validated_upload(file: UploadFile) -> bytes:
 
 
 @api_router_v1.post("/documents/upload", status_code=202)
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    processor: DocumentProcessor = Depends(get_document_processor),
+):
     """Uploads and begins processing of a health document."""
     file_content = await _read_validated_upload(file)
     try:
-        document_id = await document_processor.process_document(file_content, file.filename)
+        document_id = await processor.process_document(file_content, file.filename)
         return {"document_id": document_id, "filename": file.filename}
     except Exception as e:
         logger.error(f"Upload error: {e}", exc_info=True)
@@ -113,9 +124,13 @@ async def upload_document(file: UploadFile = File(...)):
 
 
 @api_router_v1.get("/documents/{document_id}/stream")
-async def stream_document_analysis(document_id: str, request: Request):
+async def stream_document_analysis(
+    document_id: str,
+    request: Request,
+    processor: DocumentProcessor = Depends(get_document_processor),
+):
     """Streams the analysis status of a document using SSE."""
-    if document_processor.get_analysis(document_id) is None:
+    if processor.get_analysis(document_id) is None:
         raise HTTPException(status_code=404, detail=f"Document with ID {document_id} not found")
 
     async def event_generator():
@@ -123,7 +138,7 @@ async def stream_document_analysis(document_id: str, request: Request):
         for _ in range(max_polls):
             if await request.is_disconnected():
                 return
-            doc_data = document_processor.get_analysis(document_id)
+            doc_data = processor.get_analysis(document_id)
             if doc_data:
                 yield f"data: {json.dumps(doc_data)}\n\n"
                 if doc_data["status"] in ["complete", "error"]:
@@ -136,10 +151,10 @@ async def stream_document_analysis(document_id: str, request: Request):
 
 
 @api_router_v1.get("/documents")
-async def list_documents():
+async def list_documents(processor: DocumentProcessor = Depends(get_document_processor)):
     """List all processed documents"""
     try:
-        documents = await document_processor.list_documents()
+        documents = await processor.list_documents()
         return documents
     except Exception as e:
         logger.error(f"List documents error: {str(e)}", exc_info=True)
@@ -147,10 +162,13 @@ async def list_documents():
 
 
 @api_router_v1.get("/documents/{document_id}")
-async def get_document(document_id: str):
+async def get_document(
+    document_id: str,
+    processor: DocumentProcessor = Depends(get_document_processor),
+):
     """Get a specific document by ID"""
     try:
-        doc_data = document_processor.get_analysis(document_id)
+        doc_data = processor.get_analysis(document_id)
         if not doc_data:
             raise HTTPException(status_code=404, detail=f"Document with ID {document_id} not found")
         return doc_data
@@ -162,10 +180,13 @@ async def get_document(document_id: str):
 
 
 @api_router_v1.delete("/documents/{document_id}")
-async def delete_document(document_id: str):
+async def delete_document(
+    document_id: str,
+    processor: DocumentProcessor = Depends(get_document_processor),
+):
     """Delete a specific document and all its associated data"""
     try:
-        success = await document_processor.delete_document(document_id)
+        success = await processor.delete_document(document_id)
         if not success:
             raise HTTPException(status_code=404, detail=f"Document with ID {document_id} not found or could not be deleted")
         return {"message": f"Document {document_id} successfully deleted", "document_id": document_id}
@@ -177,10 +198,13 @@ async def delete_document(document_id: str):
 
 
 @api_router_v1.post("/documents/{document_id}/retry")
-async def retry_document_processing(document_id: str):
+async def retry_document_processing(
+    document_id: str,
+    processor: DocumentProcessor = Depends(get_document_processor),
+):
     """Retry processing for a stuck or failed document"""
     try:
-        success = await document_processor.retry_document_processing(document_id)
+        success = await processor.retry_document_processing(document_id)
         if not success:
             raise HTTPException(status_code=404, detail=f"Document with ID {document_id} not found or cannot be retried")
         return {"message": f"Document {document_id} processing restarted", "document_id": document_id}

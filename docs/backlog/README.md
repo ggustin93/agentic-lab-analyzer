@@ -31,6 +31,9 @@ most of its value (see `001`–`004`).
 | [013](013-test-coverage-gaps.md) | Close targeted test coverage gaps | Medium | Should | Open |
 | [014](014-processing-task-lifecycle.md) | Processing task lifecycle | Medium | Could | Open |
 | [015](015-ocr-quality-gate.md) | OCR quality gate with three-way routing | Medium | Could | Open |
+| [016](016-repository-split.md) | Split DatabaseManager into repositories | Low | Could† | Open |
+
+† Deferred with an explicit trigger (see the issue) — recorded so the deferral is a decision, not an omission.
 
 \* Deliberately scheduled behind a documented mitigation: the project runs
 locally with synthetic data, and README section 8 states these limitations
