@@ -46,24 +46,22 @@ def test_safe_json_parse_failure():
         safe_json_parse(invalid_json)
 
 def test_parse_date_success():
-    """Test successful date parsing."""
-    # Test MM/DD/YYYY format
-    result = parse_date("12/25/2023")
-    assert result == "2023-12-25"
-    
-    # Test single digit month/day
-    result = parse_date("1/5/2023")
-    assert result == "2023-01-05"
+    """Valid ISO 8601 dates pass through unchanged."""
+    assert parse_date("2023-12-25") == "2023-12-25"
+    assert parse_date("2025-04-03") == "2025-04-03"
+
+def test_parse_date_rejects_ambiguous_formats():
+    """
+    Slash formats are ambiguous (03/04/2025 is April 3rd in Belgium but
+    March 4th in the US): anything non-ISO must be rejected, never guessed.
+    """
+    assert parse_date("03/04/2025") is None
+    assert parse_date("12/25/2023") is None
 
 def test_parse_date_invalid():
-    """Test date parsing with invalid format."""
-    # Test invalid format - should return as-is
-    result = parse_date("2023-12-25")
-    assert result == "2023-12-25"
-    
-    # Test invalid date
-    result = parse_date("13/35/2023")
-    assert result == "13/35/2023"
+    """Garbage and impossible dates are rejected as None."""
+    assert parse_date("not-a-date") is None
+    assert parse_date("2023-13-45") is None
 
 def test_parse_date_empty():
     """Test date parsing with empty values."""

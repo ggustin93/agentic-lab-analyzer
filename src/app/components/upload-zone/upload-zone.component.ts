@@ -1,8 +1,8 @@
 /**
- * 🎯 Upload Zone Component - Angular 19 Expert Implementation
+ * Upload Zone Component
  * 
  * Advanced drag & drop file upload component with 4-stage progress tracking.
- * Demonstrates expert-level Angular 19 patterns and best practices.
+ * A study of Angular 19 signal patterns applied to a small, focused component.
  * 
  * Features:
  * - Signal-based reactive state management
@@ -11,22 +11,23 @@
  * - 4-stage processing visualization (OCR → AI → Saving → Complete)
  * - Accessibility and keyboard support
  * - Type-safe file validation
- * - Expert-level error handling and logging
+ * - Centralized error handling via ToastService
  * 
  * @version 2.0.0 - Angular 19 Modernization
  */
 
-import { 
-  Component, 
-  EventEmitter, 
-  Output, 
-  input, 
-  computed, 
-  effect, 
+import {
+  Component,
+  EventEmitter,
+  Output,
+  input,
+  computed,
+  inject,
   signal,
-  ChangeDetectionStrategy 
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ToastService } from '../../services/toast.service';
 
 /**
  * 📊 Processing Stage Type Definition
@@ -71,7 +72,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit for medical documents
   }
 })
 export class UploadZoneComponent {
-  
+
+  private readonly toastService = inject(ToastService);
+
   // ===== 📤 Component Outputs =====
   /**
    * Emits the selected file when user chooses a valid document.
@@ -216,25 +219,6 @@ export class UploadZoneComponent {
            stage === 'complete';
   });
   
-  // ===== 🔄 Reactive Effects (Angular 19) =====
-  /**
-   * 📊 Progress Tracking Effect
-   * Logs progress changes for debugging and analytics.
-   * Demonstrates effect() usage for side effects in response to signal changes.
-   */
-  private readonly progressTrackingEffect = effect(() => {
-    const currentProgress = this.progress();
-    const currentStage = this.processingStage();
-    
-    // Enhanced logging for development and debugging
-    if (currentProgress !== undefined) {
-      console.log(`🎯 UPLOAD ZONE - Progress: ${currentProgress}% | Stage: "${currentStage}"`);
-    }
-    
-    // Could add analytics tracking here in production
-    // this.analyticsService.trackUploadProgress(currentProgress, currentStage);
-  });
-  
   // ===== 🎬 Event Handlers =====
   
   /**
@@ -303,7 +287,7 @@ export class UploadZoneComponent {
   /**
    * 📋 File Validation and Processing
    * 
-   * Expert-level file validation with comprehensive error handling.
+   * Client-side convenience validation (the server remains the authority — see docs/backlog/001).
    * Validates file type, size, and emits valid files to parent component.
    * 
    * Validation Rules:
@@ -315,18 +299,13 @@ export class UploadZoneComponent {
    * @private
    */
   private handleFile(file: File): void {
-    console.log(`📁 UPLOAD ZONE - Processing file: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-    
     // 🔍 MIME Type Validation
     if (!isAllowedFileType(file.type)) {
       const allowedExtensions = ALLOWED_FILE_TYPES
         .map(type => type.split('/')[1].toUpperCase())
         .join(', ');
       
-      this.showUserError(
-        `Invalid file type: ${file.type}`,
-        `Please select a valid file type: ${allowedExtensions}`
-      );
+      this.showUserError(`Please select a valid file type: ${allowedExtensions}`);
       return;
     }
     
@@ -336,35 +315,20 @@ export class UploadZoneComponent {
       const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
       
       this.showUserError(
-        `File too large: ${fileSizeMB}MB`,
-        `File size must be less than ${maxSizeMB}MB. Please compress your file or choose a smaller one.`
+        `File size must be less than ${maxSizeMB}MB (selected: ${fileSizeMB}MB). Please compress your file or choose a smaller one.`
       );
       return;
     }
     
     // ✅ File is valid - emit to parent component
-    console.log(`✅ UPLOAD ZONE - File validation passed, emitting to parent`);
     this.fileSelected.emit(file);
   }
-  
+
   /**
-   * 🚨 User Error Display
-   * 
-   * Displays user-friendly error messages for file validation failures.
-   * In production, this could integrate with a toast notification service.
-   * 
-   * @param shortMessage - Brief error description for logging
-   * @param userMessage - User-friendly error message for display
-   * @private
+   * Surfaces file validation failures to the user as toast notifications.
    */
-  private showUserError(shortMessage: string, userMessage: string): void {
-    console.warn(`⚠️ UPLOAD ZONE - ${shortMessage}`);
-    
-    // Simple alert for now - in production, use a proper notification service
-    alert(userMessage);
-    
-    // Could integrate with notification service:
-    // this.notificationService.showError(userMessage);
+  private showUserError(userMessage: string): void {
+    this.toastService.error(userMessage, 6000);
   }
 }
 
@@ -390,5 +354,5 @@ export class UploadZoneComponent {
  * - Type-safe validation with TypeScript
  * - Comprehensive error handling and user feedback
  * - Accessibility support with ARIA attributes
- * - Expert-level documentation and code organization
+ * - Documented validation rules and limits
  */

@@ -1,40 +1,32 @@
-import { Component, OnInit, OnDestroy, signal, computed, effect, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterModule, NavigationEnd } from '@angular/router';
-import { Subject, takeUntil, switchMap, map, of, filter, catchError } from 'rxjs';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { Subject, takeUntil, switchMap, map, of, catchError } from 'rxjs';
 import { DocumentAnalysisService } from '../../services/document-analysis.service';
 import { DisclaimerBannerComponent } from '../../components/disclaimer-banner/disclaimer-banner.component';
 import { DataTableComponent } from '../../components/data-table/data-table.component';
 import { AiInsightsComponent } from '../../components/ai-insights/ai-insights.component';
-import { DocumentStatus, DocumentViewModel, HealthDocument } from '../../models/document.model';
+import { DocumentStatus, DocumentViewModel } from '../../models/document.model';
 import { PdfViewerModule } from 'ng2-pdf-viewer';
 
 type AnalysisView = 'data' | 'insights' | 'source';
 
 /**
- * Analysis Page Component - Angular 19 Modernized
- * 
- * Main analysis view that displays document processing results.
- * Demonstrates advanced Angular 19 patterns:
- * - New control flow (@if) replacing all *ngIf directives
- * - inject() function for dependency injection
- * - Signals for local component state management
- * - Computed signals for derived UI states
- * - Effect() for reactive side effects
- * - Proper RxJS integration with signals
- * - OnPush change detection for optimal performance
+ * Analysis page: displays the processing state and results of one document,
+ * fetched fresh from the API on each navigation.
  */
 @Component({
   selector: 'app-analysis',
   standalone: true,
   imports: [
-    CommonModule, 
-    RouterModule, 
-    DisclaimerBannerComponent, 
-    DataTableComponent, 
+    CommonModule,
+    RouterModule,
+    DisclaimerBannerComponent,
+    DataTableComponent,
     AiInsightsComponent,
     PdfViewerModule
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="min-h-screen bg-gray-50">
       <!-- Header -->
@@ -331,10 +323,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     return doc?.aiInsights || '';
   });
   
-  // ADD THIS NEW COMPUTED SIGNAL
   readonly publicUrl = computed(() => {
     const doc = this.document();
-    // The public_url should come from the document data fetched from the API
     return doc?.public_url || '';
   });
   readonly rawText = computed(() => {
@@ -352,7 +342,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    * - Cleaner than constructor injection
    */
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly documentService = inject(DocumentAnalysisService);
 
   /**
@@ -363,32 +352,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    */
   private readonly destroy$ = new Subject<void>();
 
-  /**
-   * Modern Constructor with Effect
-   * 
-   * Uses effect() for reactive side effects instead of lifecycle hooks.
-   * Automatically tracks signal dependencies.
-   */
-  constructor() {
-    // Effect for router navigation tracking
-    this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd),
-      takeUntil(this.destroy$)
-    ).subscribe(() => {
-      // This will trigger when navigating between analysis pages
-      // The paramMap subscription in ngOnInit will handle the actual data loading
-    });
-
-    // Effect for document state change tracking
-    effect(() => {
-      const doc = this.document();
-      // Track document state changes for debugging in development
-      if (doc && doc.status) {
-        // Document state has changed - could be used for analytics
-      }
-    });
-  }
-
   ngOnInit(): void {
     this.route.paramMap
       .pipe(
@@ -396,45 +359,16 @@ export class AnalysisComponent implements OnInit, OnDestroy {
         switchMap(params => {
           this.document.set(undefined); // Reset for loading state
           const id = params.get('id');
-          
-          // Enhanced debugging and validation
-          console.log('[AnalysisComponent] Route params:', params);
-          console.log('[AnalysisComponent] Document ID from params:', id);
-          console.log('[AnalysisComponent] All param keys:', params.keys);
-          
-          // Strict validation with better error handling
+
           if (!id || id === 'undefined' || id === 'null' || id.trim() === '') {
-            console.error('[AnalysisComponent] Invalid or missing document ID:', id);
-            console.error('[AnalysisComponent] Full URL:', this.router.url);
-            console.error('[AnalysisComponent] Route snapshot:', this.route.snapshot);
             return of(null);
           }
 
-          // Always fetch fresh analysis data directly from the API
+          // Fetch fresh analysis data; the mapping to HealthDocument is
+          // owned by the service so it exists in exactly one place.
           return this.documentService.getAnalysisResults(id).pipe(
-            map(response => {
-              // Create a HealthDocument from the API response
-              const document: HealthDocument = {
-                id: response.document_id,
-                filename: response.filename,
-                uploaded_at: response.uploaded_at,
-                status: response.status,
-                processed_at: response.processed_at,
-                public_url: response.public_url, // <-- ADD THIS MAPPING
-                raw_text: response.raw_text,
-                extracted_data: response.extracted_data || [], // Ensure this is never undefined
-                ai_insights: response.ai_insights,
-                error_message: response.error_message,
-                progress: response.progress,
-                processing_stage: response.processing_stage
-              };
-              
-              return document;
-            }),
-            catchError((error: unknown) => {
-              console.error('[AnalysisComponent] Error fetching analysis results:', error);
-              return of(null); // Return null to show document not found state
-            })
+            map(response => this.documentService.mapAnalysisToDocument(response)),
+            catchError(() => of(null)) // null → "document not found" state
           );
         }),
         map(doc => doc ? new DocumentViewModel(doc) : null)
@@ -443,8 +377,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
         next: (document) => {
           this.document.set(document);
         },
-        error: (error) => {
-          console.error('[AnalysisComponent] Error loading document:', error);
+        error: () => {
           this.document.set(null);
         }
       });

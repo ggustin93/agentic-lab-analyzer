@@ -30,6 +30,8 @@ module.exports = tseslint.config(
           style: "kebab-case",
         },
       ],
+      // Health data must never leak to the browser console
+      "no-console": ["error", { allow: ["warn", "error"] }],
     },
   },
   {

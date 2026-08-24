@@ -113,7 +113,6 @@ export class DocumentListComponent {
   onDeleteDocument(documentId: string): void {
     // Defensive programming - validate document ID
     if (!documentId || documentId === 'undefined' || documentId === 'null' || documentId.trim() === '') {
-      console.error('❌ Invalid document ID provided to onDeleteDocument:', documentId);
       return;
     }
 
@@ -127,10 +126,7 @@ export class DocumentListComponent {
       : `Delete "${documentName}"?\n\nThis will permanently remove the document and all analysis results.`;
     
     if (confirm(confirmMessage)) {
-      console.log('🗑️ User confirmed deletion of document:', documentId);
       this.deleteDocument.emit(documentId);
-    } else {
-      console.log('❌ User cancelled deletion of document:', documentId);
     }
   }
   
@@ -172,14 +168,12 @@ export class DocumentListComponent {
   onRetryDocument(documentId: string): void {
     // Defensive programming - validate document ID
     if (!documentId || documentId === 'undefined' || documentId === 'null' || documentId.trim() === '') {
-      console.error('❌ Invalid document ID provided to onRetryDocument:', documentId);
       return;
     }
 
     const confirmMessage = 'This document appears to be stuck in processing. Would you like to retry the analysis?';
-    
+
     if (confirm(confirmMessage)) {
-      console.log('🔄 User requesting retry for document:', documentId);
       this.retryDocument.emit(documentId);
     }
   }
