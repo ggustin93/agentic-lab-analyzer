@@ -1,6 +1,6 @@
 # Core Framework
 fastapi==0.115.0
-uvicorn[standard]==0.30.6
+uvicorn[standard]==0.52.4
 python-multipart==0.0.18  # >=0.0.18: CVE-2024-24762, CVE-2024-53981
 
 # Data Validation & Models
