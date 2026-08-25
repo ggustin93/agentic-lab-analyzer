@@ -109,7 +109,29 @@ flowchart LR
 
 Architecture decisions and their trade-offs are recorded as ADRs in [`docs/adr/`](docs/adr/); the AI-assisted development workflow behind this project is documented in [`docs/ai-workflow.md`](docs/ai-workflow.md).
 
-### 3.2 Repository Map
+### 3.2 Repository Map & Delivery Pipeline
+
+These artifacts are not decoration; they are the pipeline every change goes through:
+
+```mermaid
+flowchart LR
+    A["Need or audit finding"] --> B["Backlog item (RICE + issue)"]
+    B -->|structural| C["ADR (docs/adr)"]
+    C --> D["Spec (docs/specs)"]
+    B --> D
+    D --> E["AI-assisted draft"]
+    E --> F["Human review"]
+    F --> G["Tests + CI"]
+    G --> H["Changelog entry"]
+    G -.->|validation findings| B
+
+    classDef product fill:#fecaca,stroke:#b91c1c,color:#7f1d1d
+    classDef ai fill:#e9d5ff,stroke:#7e22ce,color:#581c87
+    classDef eng fill:#99f6e4,stroke:#0f766e,color:#134e4a
+    class A,B,C,D,H product
+    class E ai
+    class F,G eng
+```
 
 A high-level map; the detailed structure and per-file notes live in [`CLAUDE.md`](CLAUDE.md):
 
