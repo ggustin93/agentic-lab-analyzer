@@ -5,7 +5,7 @@
 ![Angular 19](https://img.shields.io/badge/Angular-19-dd0031?logo=angular)
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776ab?logo=python&logoColor=white)
 
-This project is a full-stack application designed to analyze medical lab documents. It demonstrates a modern software architecture using Angular, FastAPI, and a specialized agent-based backend system to process and interpret health data. The engineering process is documented alongside the code: [ADRs](docs/adr/), a [specified backlog](docs/backlog/), [feature specs](docs/specs/), and the [AI-assisted workflow and its guardrails](docs/ai-workflow.md).
+This project is a full-stack application designed to analyze medical lab documents. It uses Angular, FastAPI, and an agent-based backend to process and interpret health data. The engineering process is documented alongside the code: [ADRs](docs/adr/), a [specified backlog](docs/backlog/), [feature specs](docs/specs/), and the [AI-assisted workflow and its guardrails](docs/ai-workflow.md).
 
 > **Proof of concept** (July 2025 → ongoing). Not intended for production or medical use; the security scope is stated openly in [Section 8](#8-security-privacy--known-limitations).
 
@@ -198,8 +198,8 @@ Persistence sits behind two `Protocol` ports (`backend/services/ports.py`), sele
 | Layer       | Technology                                                              |
 |-------------|-------------------------------------------------------------------------|
 | **Frontend**  | Angular 19, TypeScript, Tailwind CSS, Signals, ng2-pdf-viewer |
-| **Backend**   | Python 3.11, FastAPI, Pydantic, httpx, Specialized Agent Architecture  |
-| **AI / ML**   | Mistral AI (OCR), Chutes.AI (Analysis), Structured Health Data Models  |
+| **Backend**   | Python 3.11, FastAPI, Pydantic, httpx, agent-based pipeline            |
+| **AI / ML**   | Mistral AI (OCR), Chutes.AI (analysis), Pydantic health data models    |
 | **Database**  | SQLite (default) / Supabase PostgreSQL (optional, ADR-008)             |
 | **Storage**   | Local filesystem (default) / Supabase Storage (optional)                |
 | **DevOps**    | Docker, Docker Compose, GitHub Actions, Node 20                        |
@@ -283,10 +283,9 @@ The application will be accessible at the following endpoints:
 ## 8. Security, Privacy & Known Limitations
 
 This is a proof-of-concept and its security posture is stated openly rather
-than implied. The list below is the project's own threat-model summary; each
-item is a conscious scope decision with a planned remediation, not an
-oversight. Architecture decisions (and their accepted trade-offs) are
-recorded as ADRs in [`docs/adr/`](docs/adr/).
+than implied. The list below is the project's own threat-model summary.
+Architecture decisions (and their accepted trade-offs) are recorded as ADRs
+in [`docs/adr/`](docs/adr/).
 
 ### 8.1 Intended use
 
