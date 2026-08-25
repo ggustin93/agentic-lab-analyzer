@@ -142,6 +142,8 @@ flowchart LR
     class G,H ship
 ```
 
+This is the delivery half of a dual-track model: a solo PoC has no users, so the discovery track (interviews, opportunity mapping, outcome measurement) is deliberately absent; see [`docs/ai-workflow.md`](docs/ai-workflow.md).
+
 A high-level map; the detailed structure and per-file notes live in [`CLAUDE.md`](CLAUDE.md):
 
 | Path | Contents |
