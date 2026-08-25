@@ -115,6 +115,10 @@ These artifacts are not decoration; they are the pipeline every change goes thro
 
 ```mermaid
 flowchart LR
+    subgraph DISC["Discovery (not practiced: no users)"]
+        D1["User interviews,<br/>opportunity mapping"]
+        D2["Outcome<br/>measurement"]
+    end
     subgraph DEF["Define"]
         A["Need or<br/>audit finding"] --> B["Backlog item<br/>(RICE + GitHub issue)"]
         B -->|structural| C["ADR"]
@@ -127,22 +131,26 @@ flowchart LR
     subgraph SHIP["Verify and ship"]
         G["Tests + CI"] --> H["Changelog"]
     end
+    D1 -.-> A
     D --> E
     F -->|approved| G
     F -.->|rework| E
     G -.->|validation findings| B
+    H -.-> D2 -.-> D1
 
     classDef product fill:#bfdbfe,stroke:#1d4ed8,color:#1e3a8a
     classDef ai fill:#e9d5ff,stroke:#7e22ce,color:#581c87
     classDef human fill:#fde68a,stroke:#b45309,color:#78350f
     classDef ship fill:#bbf7d0,stroke:#15803d,color:#14532d
+    classDef future fill:#f1f5f9,stroke:#94a3b8,color:#64748b,stroke-dasharray: 5 5
     class A,B,C,D product
     class E ai
     class F human
     class G,H ship
+    class D1,D2 future
 ```
 
-This is the delivery half of a dual-track model: a solo PoC has no users, so the discovery track (interviews, opportunity mapping, outcome measurement) is deliberately absent; see [`docs/ai-workflow.md`](docs/ai-workflow.md).
+The dashed discovery track is deliberately not practiced: a solo PoC has no users to interview or outcomes to measure; see [`docs/ai-workflow.md`](docs/ai-workflow.md).
 
 A high-level map; the detailed structure and per-file notes live in [`CLAUDE.md`](CLAUDE.md):
 
