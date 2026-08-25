@@ -115,22 +115,31 @@ These artifacts are not decoration; they are the pipeline every change goes thro
 
 ```mermaid
 flowchart LR
-    A["Need or audit finding"] --> B["Backlog item (RICE + issue)"]
-    B -->|structural| C["ADR (docs/adr)"]
-    C --> D["Spec (docs/specs)"]
-    B --> D
-    D --> E["AI-assisted draft"]
-    E --> F["Human review"]
-    F --> G["Tests + CI"]
-    G --> H["Changelog entry"]
+    subgraph DEF["Define"]
+        A["Need or<br/>audit finding"] --> B["Backlog item<br/>(RICE + GitHub issue)"]
+        B -->|structural| C["ADR"]
+        C --> D["Spec: behavior,<br/>edge cases, validation"]
+        B --> D
+    end
+    subgraph BUILD["Build"]
+        E["AI-assisted draft"] --> F{{"Human review"}}
+    end
+    subgraph SHIP["Verify and ship"]
+        G["Tests + CI"] --> H["Changelog"]
+    end
+    D --> E
+    F -->|approved| G
+    F -.->|rework| E
     G -.->|validation findings| B
 
-    classDef product fill:#fecaca,stroke:#b91c1c,color:#7f1d1d
+    classDef product fill:#bfdbfe,stroke:#1d4ed8,color:#1e3a8a
     classDef ai fill:#e9d5ff,stroke:#7e22ce,color:#581c87
-    classDef eng fill:#99f6e4,stroke:#0f766e,color:#134e4a
-    class A,B,C,D,H product
+    classDef human fill:#fde68a,stroke:#b45309,color:#78350f
+    classDef ship fill:#bbf7d0,stroke:#15803d,color:#14532d
+    class A,B,C,D product
     class E ai
-    class F,G eng
+    class F human
+    class G,H ship
 ```
 
 A high-level map; the detailed structure and per-file notes live in [`CLAUDE.md`](CLAUDE.md):
