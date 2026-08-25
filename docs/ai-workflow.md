@@ -36,6 +36,12 @@ flowchart LR
     class G,H ship
 ```
 
+Known limitation of this pipeline: it is single-track by necessity. A solo
+proof of concept has no users, so there is no parallel discovery track
+(interviews, opportunity mapping) and the feedback loop closes on technical
+validation rather than on measured user outcomes. A real product would add
+both; the pipeline above is the delivery half of a dual-track model.
+
 ## Where AI is used
 
 | Activity | AI role | Human role |
