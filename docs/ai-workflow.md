@@ -50,6 +50,14 @@ has no users to interview and no outcomes to measure, so the feedback loop
 closes on technical validation instead. A real product would activate that
 track; what runs today is the delivery half of a dual-track model.
 
+What that track would look like, by the book: weekly user interviews and an
+Opportunity Solution Tree (Teresa Torres, *Continuous Discovery Habits*) run
+by a product trio, de-risking the four product risks (value, usability,
+feasibility, viability) before build (Marty Cagan, SVPG). In a team with a
+dedicated Product Management function, that lane is theirs; this pipeline's
+contribution to it is the two feedback edges: validation findings and
+edge cases surfaced during specification.
+
 ## Where AI is used
 
 | Activity | AI role | Human role |
