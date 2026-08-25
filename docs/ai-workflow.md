@@ -5,6 +5,28 @@ This document describes the actual workflow, its guardrails, and what stays
 human: because "we use AI" only means something if you can say *how* and
 *where its output gets challenged*.
 
+How a need becomes shipped software in this repository:
+
+```mermaid
+flowchart LR
+    A["Need or audit finding"] --> B["Backlog item (RICE + issue)"]
+    B -->|structural| C["ADR (docs/adr)"]
+    C --> D["Spec (docs/specs)"]
+    B --> D
+    D --> E["AI-assisted draft"]
+    E --> F["Human review"]
+    F --> G["Tests + CI"]
+    G --> H["Changelog entry"]
+    G -.->|validation findings| B
+
+    classDef product fill:#fecaca,stroke:#b91c1c,color:#7f1d1d
+    classDef ai fill:#e9d5ff,stroke:#7e22ce,color:#581c87
+    classDef eng fill:#99f6e4,stroke:#0f766e,color:#134e4a
+    class A,B,C,D,H product
+    class E ai
+    class F,G eng
+```
+
 ## Where AI is used
 
 | Activity | AI role | Human role |
