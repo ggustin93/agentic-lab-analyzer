@@ -5,7 +5,7 @@
 ![Angular 19](https://img.shields.io/badge/Angular-19-dd0031?logo=angular)
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776ab?logo=python&logoColor=white)
 
-This project is a full-stack application designed to analyze medical lab documents. It demonstrates a modern software architecture using Angular, FastAPI, and a specialized agent-based backend system to process and interpret health data. The engineering process is documented as first-class output: [ADRs](docs/adr/), a [specified backlog](docs/backlog/), [feature specs](docs/specs/), and the [AI-assisted workflow and its guardrails](docs/ai-workflow.md).
+This project is a full-stack application designed to analyze medical lab documents. It demonstrates a modern software architecture using Angular, FastAPI, and a specialized agent-based backend system to process and interpret health data. The engineering process is documented alongside the code: [ADRs](docs/adr/), a [specified backlog](docs/backlog/), [feature specs](docs/specs/), and the [AI-assisted workflow and its guardrails](docs/ai-workflow.md).
 
 > **Proof of concept** (July 2025 → ongoing). Not intended for production or medical use; the security scope is stated openly in [Section 8](#8-security-privacy--known-limitations).
 
@@ -27,7 +27,7 @@ This project is a full-stack application designed to analyze medical lab documen
 *   **Document Upload**: Upload PDF or image files of lab reports via drag-and-drop.
 *   **Automated Data Extraction**: Uses OCR and AI to parse text and identify markers, values, and reference ranges.
 *   **Out-of-Range Highlighting**: Flags values outside the parsed reference range (LLM-assisted today; deterministic backend flagging is [backlog 007](docs/backlog/007-deterministic-out-of-range.md)).
-*   **AI-Generated Insights**: Provides clear, human-readable summaries and interpretations of the lab data.
+*   **AI-Generated Insights**: Generates human-readable summaries and interpretations of the lab data.
 *   **Integrated Document Viewer**: Allows for easy cross-referencing between the extracted data and the original document.
 *   **Persistent Analysis History**: View, delete, and re-process previously analyzed documents.
 *   **Real-Time Processing Updates**: The UI reflects the document's analysis status in real time using Server-Sent Events (SSE).
@@ -58,7 +58,7 @@ DocBot AI is a multi-tier system: an Angular frontend, a FastAPI backend, and a 
 1. **OCR extraction**: `MistralOCRService` turns the uploaded PDF/image into per-page markdown, preserving table structure.
 2. **Structured extraction**: `ExtractionAgent` (Mistral Large) parses that markdown into typed health markers, validated with Pydantic; behavior, business rules and edge cases are specified in [docs/specs/lab-marker-extraction.md](docs/specs/lab-marker-extraction.md).
 3. **Insight generation**: `InsightAgent` (Chutes.AI) produces a summary and recommendations from the *validated* structured data; the medical disclaimer is enforced server-side.
-4. **Persistence**: results are stored in Supabase PostgreSQL through version-controlled migrations.
+4. **Persistence**: results are stored behind storage ports; SQLite and local files by default, Supabase optional (ADR-008).
 5. **Real-time updates**: Server-Sent Events stream the four processing stages to the Angular frontend, whose state lives in signals.
 
 ### 3.1 High-Level Diagram
@@ -111,7 +111,7 @@ Architecture decisions and their trade-offs are recorded as ADRs in [`docs/adr/`
 
 ### 3.2 Repository Map & Delivery Pipeline
 
-These artifacts are not decoration; they are the pipeline every change goes through:
+Every change goes through the same pipeline of artifacts:
 
 ```mermaid
 flowchart LR
