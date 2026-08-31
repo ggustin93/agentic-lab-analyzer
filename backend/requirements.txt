@@ -9,7 +9,7 @@ pydantic-settings==2.15.0
 
 # HTTP Client & Async
 httpx==0.28.1
-aiofiles==23.2.0
+aiofiles==25.1.0
 
 # Environment & Configuration
 python-dotenv==1.2.3
