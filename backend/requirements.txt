@@ -1,10 +1,10 @@
 # Core Framework
 fastapi==0.141.1
-uvicorn[standard]==0.52.4
+uvicorn[standard]==0.53.0
 python-multipart==0.0.32  # >=0.0.18: CVE-2024-24762, CVE-2024-53981
 
 # Data Validation & Models
-pydantic==2.13.4
+pydantic==2.13.5
 pydantic-settings==2.15.0
 
 # HTTP Client & Async
